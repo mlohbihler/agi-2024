@@ -1,3 +1,5 @@
+require "./puzzle"
+
 class Board
   attr_reader :row_count, :col_count
 
@@ -7,6 +9,21 @@ class Board
     @dirty_cols = Array.new(col_count) { true }
     @row_count = row_count
     @col_count = col_count
+  end
+
+  def self.from_strings(strs)
+    cols = strs.first.length
+    raise "All rows must have the same number of columns" if strs.any? { |r| r.length != cols }
+
+    board = Board.new(strs.length, cols)
+    strs.each_with_index do |str, r|
+      str.chars.each_with_index { |e, c| board[r, c] = e.to_sym if e != Puzzle::UNKNOWN }
+    end
+    board
+  end
+
+  def view(index, is_row, from = 0, to = length(!is_row))
+    BoardView.new(self, index, is_row, from, to)
   end
 
   def []=(row, col, value)
@@ -49,7 +66,7 @@ class Board
     puts "   #{(0...@col_count).map { |i| (i + 1) % 10 }.join}"
     puts "   #{'-' * @col_count}"
     @board.each_with_index do |row, i|
-      puts "#{(i + 1) % 10}: #{row.map { |e| e.nil? ? '.' : e.to_s }.join} #{@dirty_rows[i] ? 'X' : ' '}"
+      puts "#{(i + 1) % 10}: #{row.map { |e| e.nil? ? Puzzle::FANCY_UNKNOWN : e.to_s }.join} #{@dirty_rows[i] ? 'X' : ' '}"
     end
     puts ""
     puts "   #{@dirty_cols.map { |i| i ? 'X' : ' ' }.join}"

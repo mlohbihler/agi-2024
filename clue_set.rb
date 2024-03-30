@@ -1,4 +1,11 @@
+require "./puzzle"
+require "pry"
+require "pry-remote"
+require "pry-nav"
+
 class ClueSet
+  include Enumerable
+
   def initialize(clues)
     if clues.is_a?(String)
       clues = clues.split(",").map { |c| Clue.new(c) }
@@ -18,27 +25,19 @@ class ClueSet
     @clues.each(&blk)
   end
 
-  # def sum
-  #   last_clue_colour = nil
-  #   @clues.sum do |c|
-  #     spacer = c.colour == last_clue_colour ? 1 : 0
-  #     last_clue_colour = c.colour
-  #     c.count + spacer
-  #   end
-  # end
+  def ==(other)
+    @clues == other.instance_variable_get(:@clues)
+  end
 
-  # def fill_array(arr)
-  #   diff = arr.length - sum
-  #   offset = 0
-  #   last_clue_colour = nil
-  #   @clues.each do |clue|
-  #     if clue.colour == last_clue_colour
-  #       arr[offset] = :_ if diff == 0
-  #       offset += 1
-  #     end
-  #     (diff...clue.count).each { |i| arr[offset + i] = clue.colour }
-  #     offset += clue.count
-  #     last_clue_colour = clue.colour
-  #   end
-  # end
+  def reverse
+    self.class.new(@clues.reverse)
+  end
+
+  def to_s
+    "[#{@clues.join(',')}]"
+  end
+
+  def view(from: 0, to: length)
+    ClueSetView.new(self, from: from, to: to)
+  end
 end

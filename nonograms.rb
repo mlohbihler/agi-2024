@@ -9,12 +9,10 @@ require "./clue_set"
 require "./clue_set_view"
 require "./puzzle"
 
-# puzzle = Puzzle.from_file("ladybug.20x20")
-puzzle = Puzzle.from_file("pumpkins.45x35")
+puzzle = Puzzle.from_file("ladybug.20x20")
+# puzzle = Puzzle.from_file("pumpkins.45x35")
 puzzle.solve
 puzzle.draw
-
-
 
 # tops = Hash.new(0)
 # clues[:top].each { |s| s.split(",").each { |c| tops[c[-1]] += c[0..-2].to_i } }
