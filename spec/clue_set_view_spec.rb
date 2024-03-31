@@ -18,16 +18,8 @@ describe ClueSetView do
     end
 
     it "works" do
-      expect(ranges("2a,2a,2a", "..a...a...")).to(eq([
-        [(1...4)],
-        [(5...7)],
-        [(6...10)],
-      ]))
-      expect(ranges("2a,2a,2a", "..a ..a...")).to(eq([
-        [(1...3)],
-        [(5...7)],
-        [(6...10)],
-      ]))
+      expect(ranges("2a,2a,2a", "..a...a...")).to(eq([[(1...4)], [(5...7)], [(6...10)]]))
+      expect(ranges("2a,2a,2a", "..a ..a...")).to(eq([[(1...3)], [(5...7)], [(6...10)]]))
       expect(ranges("3a,2a,5b,1b,3a", "....aa....bbb.b....")).to(eq([
         [(0...6)],
         [(4...9)],
@@ -42,15 +34,8 @@ describe ClueSetView do
         [(12...18)],
         [(13...21)],
       ]))
-      expect(ranges("7a,2b,6a", "a.a.a.a....b...aa...a")).to(eq([
-        [(0...11)],
-        [(7...15)],
-        [(12...21)],
-      ]))
-      expect(ranges("1a,1a", " .a......")).to(eq([
-        [(2...7)],
-        [(2...9)],
-      ]))
+      expect(ranges("7a,2b,6a", "a.a.a.a....b...aa...a")).to(eq([[(0...11)], [(7...15)], [(12...21)]]))
+      expect(ranges("1a,1a", " .a......")).to(eq([[(2...7)], [(2...9)]]))
       expect(ranges("4a,2a,2a,2a", "....a...a........a")).to(eq([
         [1...7],
         [7...12],
@@ -63,6 +48,21 @@ describe ClueSetView do
         [8...15],
         [11...18],
       ]))
+      expect(ranges("2b,2r,1b,4a", "..........rb..aa....")).to(eq([
+        [0...10, 11...13],
+        [2...11, 12...14],
+        [4...10, 11...14],
+        [5...10, 12...18],
+      ]))
+      expect(ranges("1b,7r,5b,1b", ".....rrrrrr..b..b...")).to(eq([
+        [0...5],
+        [4...12],
+        [12...18],
+        [16...20],
+      ]))
+      expect(ranges("3a,3b", ".....   ...")).to(eq([[0...5], [8...11]]))
+      expect(ranges("3a,2a", ".....   ...")).to(eq([[0...5], [8...11]]))
+      expect(ranges("3a,2a", ".....   ......")).to(eq([[0...5, 8...11], [8...14]]))
     end
   end
 
@@ -82,6 +82,11 @@ describe ClueSetView do
       matches("7a,2b,6a", "aaaaaaa........")
       matches("7a,2b,6a", "a.a.a.a....b...aa...a")
       matches("10a,2a", ".a.a...a............")
+
+      matches("2b,2r,1b,4a", "..........rb..aa....")
+      matches("1b,7r,5b,1b", ".....rrrrrr..b..b...", { 0 => 1, 1 => 2 })
+      matches("3b", "          .b..      ")
+      matches("4b,1b,3b", "...b..b...b .b.b... ", { 0 => 0, 5 => 2 })
     end
 
     it "matches clues at boundaries" do
@@ -98,20 +103,9 @@ describe ClueSetView do
     end
 
     it "matches correctly when there are spaces" do
-      binding.pry
       matches("1a,1a", " .a......")
-                          # 00000
-                          #   11111
       matches("1a,1a", " ......a. ")
     end
-
-    # it "raises if the clue sets are not comparable" do
-    #   csv = ClueSet.new("2a,5b,1b").view
-    #   board_view = create_board_view("...aa..bbbbbb.b")
-    #   expect do
-    #     csv.match(board_view)
-    #   end.to raise_error(StandardError, a_string_matching(/Unable to match clue sets/))
-    # end
   end
 
   context "#fill" do
@@ -286,6 +280,36 @@ describe ClueSetView do
     it "works for negative cases" do
       expect(solutions("1a,1a,4b,2a", "....")).to(eq([]))
       expect(solutions("1a,1a,4b,2a", "..... ...")).to(eq([]))
+    end
+  end
+
+  context "#[]" do
+    it "works" do
+      expect(ClueSet.new("1a,2b,1b,3b").view(2, 3)[0].to_s).to(eq("1b"))
+    end
+  end
+
+  context "#spacer" do
+    it "works" do
+      expect(ClueSet.new("1a,2b,1b,2b").view(0).spacer(0, before: true)).to(eq(0))
+      expect(ClueSet.new("1a,2b,1b,2b").view(0).spacer(1, before: true)).to(eq(0))
+      expect(ClueSet.new("1a,2b,1b,2b").view(0).spacer(2, before: true)).to(eq(1))
+      expect(ClueSet.new("1a,2b,1b,2b").view(0).spacer(3, before: true)).to(eq(1))
+
+      expect(ClueSet.new("1a,2b,1b,2b").view(0).spacer(0, before: false)).to(eq(0))
+      expect(ClueSet.new("1a,2b,1b,2b").view(0).spacer(1, before: false)).to(eq(1))
+      expect(ClueSet.new("1a,2b,1b,2b").view(0).spacer(2, before: false)).to(eq(1))
+      expect(ClueSet.new("1a,2b,1b,2b").view(0).spacer(3, before: false)).to(eq(0))
+    end
+  end
+
+  context ".resolve_multiple_matches" do
+    it "works" do
+      expect(described_class.resolve_multiple_matches({})).to(eq({}))
+      expect(described_class.resolve_multiple_matches({ 0 => [1], 1 => [0, 2], 2 => [3] })).
+        to(eq({ 0 => 1, 1 => 2, 2 => 3 }))
+      expect(described_class.resolve_multiple_matches({ 0 => 1, 1 => [2], 2 => [2, 3] })).
+        to(eq({ 0 => 1, 1 => 2 }))
     end
   end
 end

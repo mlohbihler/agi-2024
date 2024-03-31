@@ -17,6 +17,10 @@ class ClueSet
     @clues.length
   end
 
+  def empty?
+    @clues.empty?
+  end
+
   def [](index)
     @clues[index]
   end
@@ -37,7 +41,7 @@ class ClueSet
     "[#{@clues.join(',')}]"
   end
 
-  def view(from: 0, to: length)
+  def view(from = 0, to = length)
     ClueSetView.new(self, from: from, to: to)
   end
 end

@@ -31,7 +31,7 @@ class Board
       @dirty_rows[row] = true
       @dirty_cols[col] = true
     elsif @board[row][col] != value
-      raise "Trying to set (#{row},#{col}) to ${value} when it is already #{@board[row][col]}"
+      raise "Trying to set (#{row},#{col}) to '#{value}' when it is already '#{@board[row][col]}'"
     end
     @board[row][col] = value
   end
@@ -43,6 +43,10 @@ class Board
   def dirtify
     @dirty_rows.fill(true)
     @dirty_cols.fill(true)
+  end
+
+  def any_dirty?
+    @dirty_rows.any? || @dirty_cols.any?
   end
 
   def dirty?(is_row, index)
@@ -60,7 +64,6 @@ class Board
       @dirty_cols[index] = false
     end
   end
-  # TODO: after solving a row/col, remember to reset its dirty flag. Afterwards, not before!
 
   def draw
     puts "   #{(0...@col_count).map { |i| (i + 1) % 10 }.join}"

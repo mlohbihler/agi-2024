@@ -23,7 +23,7 @@ describe BoardView do
       ])))
     end
 
-    it "returns correct clues when solves cells are at the edges" do
+    it "returns correct clues when solved cells are at the edges" do
       board = Board.from_strings(["aaa.....bb"])
       view = described_class.new(board, 0, true, 0, 10)
       expect(view.to_clues).to(eq(ClueSet.new([
@@ -43,123 +43,134 @@ describe BoardView do
       expect(Board.from_strings(["  a  "]).view(0, true).trim.to_s).to(eq("a"))
       expect(Board.from_strings([" a "]).view(0, true).trim.to_s).to(eq("a"))
       expect(Board.from_strings(["a"]).view(0, true).trim.to_s).to(eq("a"))
+      expect(Board.from_strings([" "]).view(0, true).trim.to_s).to(eq(""))
+      expect(Board.from_strings([""]).view(0, true).trim.to_s).to(eq(""))
     end
   end
 
   context "#fill_from_matches" do
+    def call(board, clues)
+      board_view = Board.from_strings([board]).view(0, true)
+      csv = ClueSet.new(clues).view
+      board_view.fill_from_matches(csv)
+      board_view.to_s
+    end
+
+    it "doesn't actuallly change anything, but would be nice if it did" do
+      expect(call("...b..b...b .b.b... ", "4b,1b,3b")).to(eq("···b··b···b ·b·b··· "))
+      expect(call("......     ...", "4a,2a")).to(eq("······     ···"))
+    end
+
     it "works" do
-      # board = Board.from_strings([".....rrrrrr.bbbb...."])
-      # board_view = board.view(0, true)
-      # clue_set = ClueSet.new("1b,7r,8b")
-      # board_clue_set = board_view.to_clues #ClueSet.new([Clue.new(6, "r", 5), Clue.new(4, "b", 12)])
-      # matches = clue_set.match(board_view) # matches = { 0 => 1, 1 => 2 }
-      # puts board_view.fill_from_matches(clue_set, board_clue_set, matches)
-
-      # clue_set = ClueSet.new("1b,7r,8b")
-      # solved_clue_set = ClueSet.new([])
-      # matches = {}
-      # puts board_view.fill_from_matches(clue_set, board_clue_set, matches)
-
-      # clue_set = ClueSet.new("1b,7r,8b")
-      # solved_clue_set = ClueSet.new([Clue.new(1, "r", 5), Clue.new(1, "r", 7), Clue.new(1, "r", 10)])
-      # matches = { 0 => 1, 1 => 1, 2 => 1 }
-      # puts board_view.fill_from_matches(clue_set, board_clue_set, matches)
-
-      # clue_set = ClueSet.new("1b,7r,8b")
-      # solved_clue_set = ClueSet.new([Clue.new(1, "r", 1)])
-      # matches = { 0 => 1 }
-      # puts board_view.fill_from_matches(clue_set, board_clue_set, matches)
-
-      # Including spaces
     end
   end
 
   context "#fill_in_between_matches" do
+    def call(board, clues)
+      board_view = Board.from_strings([board]).view(0, true)
+      csv = ClueSet.new(clues).view
+      board_view.fill_in_between_matches(csv, board_view.to_clues, csv.match(board_view))
+      board_view.to_s
+    end
+
     context "when filling before a match" do
       it "works" do
-        # board_view = Board.from_strings(["....x.."]).view(0, true)
-        # clue_set = ClueSet.new("2a,1a,1x")
-        # board_view.fill_in_between_matches(clue_set, board_view.to_clues, clue_set.match(board_view))
-        # expect(board_view.to_s).to(eq("aa.ax.."))
-
-        # board_view = Board.from_strings(["....x.."]).view(0, true)
-        # clue_set = ClueSet.new("2a,1b,1x")
-        # board_view.fill_in_between_matches(clue_set, board_view.to_clues, clue_set.match(board_view))
-        # expect(board_view.to_s).to(eq(".a..x.."))
-
-        # board_view = Board.from_strings([" ...x.."]).view(0, true)
-        # clue_set = ClueSet.new("2a,1b,1x")
-        # board_view.fill_in_between_matches(clue_set, board_view.to_clues, clue_set.match(board_view))
-        # expect(board_view.to_s).to(eq(" aabx.."))
-
-        board_view = Board.from_strings([".. .x.."]).view(0, true)
-        clue_set = ClueSet.new("2a,1b,1x")
-        board_view.fill_in_between_matches(clue_set, board_view.to_clues, clue_set.match(board_view))
-        expect(board_view.to_s).to(eq("aa bx.."))
-
-        board_view = Board.from_strings(["... x.."]).view(0, true)
-        clue_set = ClueSet.new("2a,1b,1x")
-        board_view.fill_in_between_matches(clue_set, board_view.to_clues, clue_set.match(board_view))
-        expect(board_view.to_s).to(eq("aab x.."))
+        expect(call("....x..", "2a,1a,1x")).to(eq("aa ax··"))
+        expect(call("....x..", "2a,1b,1x")).to(eq("·a··x··"))
+        expect(call(" ...x..", "2a,1b,1x")).to(eq(" aabx··"))
+        expect(call(".. .x..", "2a,1b,1x")).to(eq("·a ·x··"))
+        expect(call("... x..", "2a,1b,1x")).to(eq("aab x··"))
       end
     end
 
     context "when filling between matches" do
       it "works" do
-        # board_view = Board.from_strings(["....x.."]).view(0, true)
-        # clue_set = ClueSet.new("2a,1a,1x")
-        # board_view.fill_in_between_matches(clue_set, board_view.to_clues, clue_set.match(board_view))
-        # expect(board_view.to_s).to(eq("aa.ax.."))
+        expect(call("aa..x..", "2a,1a,1x")).to(eq("aa·ax··"))
+        expect(call("aa .x..", "2a,1a,1x")).to(eq("aa ax··"))
+      end
 
-        # board_view = Board.from_strings(["....x.."]).view(0, true)
-        # clue_set = ClueSet.new("2a,1b,1x")
-        # board_view.fill_in_between_matches(clue_set, board_view.to_clues, clue_set.match(board_view))
-        # expect(board_view.to_s).to(eq(".a..x.."))
+      it "fills space between board clues for the same clue" do
+        expect(call("..aa....aaa.", "11a")).to(eq("··aaaaaaaaa·"))
+      end
 
-        # board_view = Board.from_strings([" ...x.."]).view(0, true)
-        # clue_set = ClueSet.new("2a,1b,1x")
-        # board_view.fill_in_between_matches(clue_set, board_view.to_clues, clue_set.match(board_view))
-        # expect(board_view.to_s).to(eq(" aabx.."))
-
-        # board_view = Board.from_strings([".. .x.."]).view(0, true)
-        # clue_set = ClueSet.new("2a,1b,1x")
-        # board_view.fill_in_between_matches(clue_set, board_view.to_clues, clue_set.match(board_view))
-        # expect(board_view.to_s).to(eq("aa bx.."))
-
-        # board_view = Board.from_strings(["... x.."]).view(0, true)
-        # clue_set = ClueSet.new("2a,1b,1x")
-        # board_view.fill_in_between_matches(clue_set, board_view.to_clues, clue_set.match(board_view))
-        # expect(board_view.to_s).to(eq("aab x.."))
+      it "extrapolates from adjacent clues, and fills spaces between them" do
+        expect(call(".a.......bb.", "2a,3b")).to(eq("·a·     ·bb·"))
+        expect(call(".aa.....bbb.", "2a,3b")).to(eq("·aa     bbb·"))
+        expect(call("..aa..aaa..", "4a,5a")).to(eq("·aaa··aaaa·"))
       end
     end
 
-    context "when filling after a matche" do
+    context "when filling after a match" do
       it "works" do
-        # board_view = Board.from_strings(["....x.."]).view(0, true)
-        # clue_set = ClueSet.new("2a,1a,1x")
-        # board_view.fill_in_between_matches(clue_set, board_view.to_clues, clue_set.match(board_view))
-        # expect(board_view.to_s).to(eq("aa.ax.."))
-
-        # board_view = Board.from_strings(["....x.."]).view(0, true)
-        # clue_set = ClueSet.new("2a,1b,1x")
-        # board_view.fill_in_between_matches(clue_set, board_view.to_clues, clue_set.match(board_view))
-        # expect(board_view.to_s).to(eq(".a..x.."))
-
-        # board_view = Board.from_strings([" ...x.."]).view(0, true)
-        # clue_set = ClueSet.new("2a,1b,1x")
-        # board_view.fill_in_between_matches(clue_set, board_view.to_clues, clue_set.match(board_view))
-        # expect(board_view.to_s).to(eq(" aabx.."))
-
-        # board_view = Board.from_strings([".. .x.."]).view(0, true)
-        # clue_set = ClueSet.new("2a,1b,1x")
-        # board_view.fill_in_between_matches(clue_set, board_view.to_clues, clue_set.match(board_view))
-        # expect(board_view.to_s).to(eq("aa bx.."))
-
-        # board_view = Board.from_strings(["... x.."]).view(0, true)
-        # clue_set = ClueSet.new("2a,1b,1x")
-        # board_view.fill_in_between_matches(clue_set, board_view.to_clues, clue_set.match(board_view))
-        # expect(board_view.to_s).to(eq("aab x.."))
+        expect(call("..aaa...", "4a,2a")).to(eq("··aaa·aa"))
+        expect(call("..aaa...", "4a,2b")).to(eq("··aaa·b·"))
       end
     end
   end
+
+  context "#fill_from_edges" do
+    def call(board, clues)
+      board_view = Board.from_strings([board]).view(0, true)
+      csv = ClueSet.new(clues).view
+      board_view.fill_from_edges(csv, board_view.to_clues, csv.match(board_view))
+      board_view.to_s
+    end
+
+    it "works" do
+      expect(call("    ···· b··    bb  ", "2ba,3b,2b")).to(eq("    ···· bbb    bb  "))
+      # expect(call("..aaa...........", "10a")).to(eq("··aaaaaaaa··    "))
+      # expect(call("aaa...........", "10a")).to(eq("aaaaaaaaaa    "))
+      # expect(call(".....aaa......", "8a")).to(eq("·····aaa····· "))
+      # expect(call(".....aaa......", "7a")).to(eq(" ····aaa····  "))
+      # expect(call("...aaa.......", "11a")).to(eq("··aaaaaaaaa··"))
+      # expect(call("...........aaa..", "10a")).to(eq("    ··aaaaaaaa··"))
+      # expect(call("...........aaa", "10a")).to(eq("    aaaaaaaaaa"))
+      # expect(call(".aaa.... .. ....bb", "7a,2c,4b")).to(eq("·aaaaaa· ·· ··bbbb"))
+      # expect(call("  .aa....   .b.  .cc.  .....d   ", "7a,3b,3c,2d")).to(eq("  aaaaaaa   bbb  ·cc·  ····dd   "))
+      # expect(call("          .b..      ", "3b")).to(eq("          ·bb·      "))
+      # expect(call("..b..  ", "4b")).to(eq("·bbb·  "))
+      # expect(call("  ..b..", "4b")).to(eq("  ·bbb·"))
+      # expect(call(".aaa...   ..    bb..", "7a,2c,4b")).to(eq("aaaaaaa   ··    bbbb"))
+      # expect(call("....abb....", "4a,5b")).to(eq(" aaaabbbbb "))
+      # expect(call("....a.bb....", "4a,5b")).to(eq(" ·aaa·bbbb· "))
+    end
+  end
+
+  context "#cap_solved_clues" do
+    def call(board, clues)
+      board_view = Board.from_strings([board]).view(0, true)
+      csv = ClueSet.new(clues).view
+      board_view.cap_solved_clues(csv, board_view.to_clues, csv.match(board_view))
+      board_view.to_s
+    end
+
+    it "works" do
+      expect(call("..aaa...", "3a")).to(eq("··aaa···"))
+      expect(call("..aaa.....", "3a,1a")).to(eq("··aaa ····"))
+    end
+  end
 end
+
+
+# 12345678901234567890
+# --------------------
+# 1:     ···· b··    bb
+# 2:     ·b·b b·· bbbb
+# 3:      ···rrrrbbb bb b
+# 4:     brrrrrrrbbbbbbbb
+# 5:    brrrrrrr bbbbb b
+# 6:   brrrrrrrr  bbbbbb
+# 7:   brrrbbrrrbbbbbbbb
+# 8:  brrrrbbrrrbbb bbb
+# 9:  brrrrrrrrrbbb  rr··
+# 0:  rrrrrrrrrbrrrrrrr··
+# 1:  rrrrrrrrbrrrrrrrrbb
+# 2: bbrbbrrrbrrrrrrrrr
+# 3: b rbbrrbrrrrbbrrr···
+# 4: barrrrbrrrrrbbrrrbb
+# 5:  aarrbrrrrrrrrrrr··
+# 6:  aarbrrrbbrrrrrrb bb
+# 7:  a  rrrrbbrrrrrb
+# 8:     aarrrrrrrbb
+# 9:    aaaa brrbb
+# 0:       bbb

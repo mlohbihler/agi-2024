@@ -19,7 +19,7 @@ class Puzzle
     counter = lambda do |clue_sets|
       counts = Hash.new(0)
       clue_sets.each { |cs| cs.each { |c| counts[c.colour] += c.count } }
-      raise "Clues cannot contain the default colour" if counts[BLANK]
+      raise "Clues cannot contain the default colour" if counts.key(BLANK)
 
       counts
     end
@@ -54,74 +54,64 @@ class Puzzle
     end
   end
 
+  def for_all_clue_sets
+    fn = lambda do |clue_sets, is_rows|
+      clue_sets.each_with_index do |cs, index|
+        bv = BoardView.new(@board, index, is_rows, 0, @board.length(!is_rows))
+        yield(cs, bv)
+      end
+    end
+    fn.call(@left_clue_sets, true)
+    fn.call(@top_clue_sets, false)
+  end
+
+  def loop_until_clean
+    @board.dirtify
+
+    loop do
+      for_all_clue_sets do |cs, bv|
+        next unless bv.dirty?
+
+        bv.clean
+        yield(cs, bv)
+      end
+
+      break unless @board.any_dirty?
+    end
+  end
+
   def solve
-    # TODO: This is currently trivial because it only can work with empty lines. It has the
-    # precursors of being able to split a line into parts by using solved information, but that
-    # doesn't work yet.
+    # Find any row/cols without clues with spaces.
+    for_all_clue_sets do |cs, bv|
+      (0...bv.length).each { |i| bv.set[i] = Puzzle::BLANK } if cs.empty?
+    end
+
+    # Start with a easy method of adding initial information. Then we can move on to move intricate
+    # algos.
     fill_rows_by_counting
 
-    partition_clue_sets
+    # Like this one.
+    fill_rows_by_clue_matching
+
+    # TODO: use the "solved" attribute in the clues to know what clues are done, and be able to
+    # split views into sub-views
   end
 
   def fill_rows_by_counting
     # Fills cells by trying to match clues to existing board values, and then creating views of
     # corresponding rows/cols and clues, and using the fill method to try and find more values.
-    @board.dirtify
-
-    filler = lambda do |clue_sets, is_rows|
-      changes = false
-      clue_sets.each_with_index do |clue_set, index|
-        next unless @board.dirty?(is_rows, index)
-
-        board_view = BoardView.new(@board, index, is_rows, 0, @board.length(!is_rows))
-        clue_set_view = ClueSetView.new(clue_set, from: 0, to: clue_set.length)
-        clue_set_view.fill(board_view)
-        @board.clean(is_rows, index)
-        changes = true
-      end
-      changes
-    end
-
-    loop do
-      # TODO: write the code that breaks a row/col into unsolved views
-      filler.call(@left_clue_sets, true)
-      changes_made = filler.call(@top_clue_sets, false)
-
-      break unless changes_made
+    loop_until_clean do |cs, bv|
+      cs.view.fill(bv)
     end
   end
 
-  def partition_clue_sets
-    is_rows = true
-    @left_clue_sets.each_with_index do |clue_set, index|
-      # next unless @board.dirty?(is_rows, index)
+  def fill_rows_by_clue_matching
+    @board.dirtify
 
-      board_view = BoardView.new(@board, index, is_rows, 0, @board.length(!is_rows))
-      matches = clue_set.match(board_view)
+    loop_until_clean do |cs, bv|
+      bv.fill_from_matches(cs.view)
+      @board.draw
       binding.pry
-
-
-      solved_clue_set = board_view.to_clues
-
-      inner_board_view = BoardView.new(@board, index, is_rows, 0, @board.length(!is_rows))
-      # clue_set_view = ClueSetView.new(clue_set, 0, clue_set.length)
-      # clue_set_view.fill(board_view)
-
-
-      # clue_set_view = ClueSetView.new(clue_set, 0, clue_set.length)
-      # clue_set_view.fill(board_view)
-      # @board.clean(is_rows, index)
-      # changes = true
-
-      # => "·····rrrrrr·bbbb····"
-      # [2] pry(#<Puzzle>)> matches
-      # => {0=>1, 1=>2}
-      # [3] pry(#<Puzzle>)> clue_set.to_s
-      # => "[1b,7r,8b]"
-      # [5] pry(#<Puzzle>)> board_view.to_clues.to_s
-      # => "[6r(5),4b(12)]"
-      # [6] pry(#<Puzzle>)> clue_set
-
     end
   end
 

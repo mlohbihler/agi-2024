@@ -8,6 +8,8 @@ require "pry-nav"
 class BoardView
   include Enumerable
 
+  attr_reader :index, :is_row
+
   def initialize(board, index, is_row, from, to)
     @board = board
     @index = index
@@ -48,11 +50,19 @@ class BoardView
     index >= 0 && index < length
   end
 
+  def dirty?
+    @board.dirty?(@is_row, @index)
+  end
+
+  def clean
+    @board.clean(@is_row, @index)
+  end
+
   def padding
     left = nil
     right = nil
     index = 0
-    while left.nil? || right.nil?
+    while length > 0 && (left.nil? || right.nil?)
       rindex = length - index
       break if left.nil? && right.nil? && rindex < index
 
@@ -88,60 +98,129 @@ class BoardView
     ClueSet.new(result)
   end
 
-  def view(from, to)
-    BoardView.new(@board, @index, @is_row, @from + from, @from + to)
+  def view(from, to = length)
+    self.class.new(@board, @index, @is_row, @from + from, @from + to)
   end
 
-  def fill_from_matches(clue_set, board_clue_set, matches)
-    fill_in_between_matches(clue_set, board_clue_set, matches)
+  def fill_from_matches(csv)
+    board_clue_set = to_clues
+
+    # TODO: there is potential information in the ranges, especially when there are spaces in the
+    # board. Get the ranges separately here and fill spaces using that information.
+
+    matches = csv.match(self)
+
+    fill_in_between_matches(csv, board_clue_set, matches)
+    fill_from_edges(csv, board_clue_set, matches)
+    cap_solved_clues(csv, board_clue_set, matches)
   end
 
-  def fill_in_between_matches(clue_set, board_clue_set, matches)
+  # TODO: Could be useful to recursively call this method on the spaces between matches.
+  def fill_in_between_matches(csv, board_clue_set, matches)
+    return if matches.empty?
+
+    # Fill before the first match
+    board_clue_index, clue_index = matches.first
+    board_clue = board_clue_set[board_clue_index]
+    spacer = csv.spacer(clue_index, before: true)
+    csv.view(0, clue_index).fill(view(0, board_clue.solution - spacer).trim)
+
+    # Fill between matches
+    matches.each_cons(2) do |(left_board_i, left_clue_i), (right_board_i, right_clue_i)|
+      left_board_clue = board_clue_set[left_board_i]
+      right_board_clue = board_clue_set[right_board_i]
+
+      if right_clue_i == left_clue_i
+        # The board clues are the same clue. Fill the space between them.
+        (left_board_clue.to...right_board_clue.solution).
+          each { |i| self[i] = left_board_clue.colour }
+      elsif right_clue_i - left_clue_i == 1
+        # # The clues are adjacent, so extrapolate from them.
+        right_clue = csv[right_clue_i]
+        left_clue = csv[left_clue_i]
+
+        spacer = csv.spacer(left_clue_i, before: false)
+
+        from = right_board_clue.solution - spacer - left_clue.count
+        to = left_board_clue.solution
+        (from...to).each { |i| self[i] = left_board_clue.colour }
+
+        from = right_board_clue.to
+        to = left_board_clue.to + spacer + right_clue.count
+        (from...to).each { |i| self[i] = right_board_clue.colour }
+
+        # Also, fill with spaces between clues.
+        from = left_board_clue.solution + spacer + left_clue.count
+        to = right_board_clue.to - spacer - right_clue.count
+        (from...to).each { |i| self[i] = Puzzle::BLANK }
+      else
+        left_spacer = csv.spacer(left_clue_i, before: false)
+        right_spacer = csv.spacer(right_clue_i, before: true)
+        csv.view(left_clue_i + 1, right_clue_i).fill(
+          view(left_board_clue.to + left_spacer, right_board_clue.solution - right_spacer).trim
+        )
+      end
+    end
+
+    # Fill after the last match
+    board_clue_index = matches.keys.last
+    clue_index = matches[board_clue_index]
+    board_clue = board_clue_set[board_clue_index]
+    spacer = csv.spacer(clue_index, before: false)
+    csv.view(clue_index + 1).fill(view(board_clue.to + spacer).trim)
+  end
+
+  def fill_from_edges(csv, board_clue_set, matches)
     return if matches.empty?
 
     binding.pry
-    # Fill before the first match
-    board_clue_index, clue_index = match.first
-    board_clue = board_clue_set[board_index]
-    clue_set_view = clue_set.view(from: 0, to: clue_index)
-    # if clue_set_view.any?
+    bcsv = board_clue_set.view
+    matches.each_with_index do |(board_clue_index, clue_index)|
+      board_clue = board_clue_set[board_clue_index]
+      clue = csv[clue_index]
 
+      left_limit = bcsv.limit(board_clue_index, length, before: true)
+      if left_limit
+        (board_clue.to...left_limit + clue.count).each { |i| self[i] = clue.colour }
+      end
 
-    #   board_clue = board_clue_set[board_index]
-    #     sub_board_view = view(last_board_clue.nil? ? 0 : last_board_clue.to, board_clue.solution)
-    #     clue_set_view.fill(sub_board_view)
-    #   end
+      right_limit = bcsv.limit(board_clue_index, length, before: false)
+      if right_limit
+        (right_limit - clue.count...board_clue.solution).each { |i| self[i] = clue.colour }
+      end
+    end
 
-    #   last_clue_index = clue_index
-    #   last_board_clue = board_clue
-    # end
+    # Fill blanks from the edges
+    board_clue_index, clue_index = matches.first
+    if clue_index == 0
+      board_clue = board_clue_set[board_clue_index]
+      clue = csv[clue_index]
+      (0...board_clue.to - clue.count).each { |i| self[i] = Puzzle::BLANK }
+    end
 
-    # Fill between matches
-    # previous_clue_index = nil
-    # previous_board_clue = nil
-    # matches.each do |board_index, clue_index|
-    #   board_clue = board_clue_set[board_index]
-    #   clue_set_view = clue_set.view(
-    #     from: previous_clue_index.nil? ? 0 : previous_clue_index + 1, to: clue_index
-    #   )
-    #   if clue_set_view.any?
-    #     sub_board_view = view(previous_board_clue.nil? ? 0 : previous_board_clue.to, board_clue.solution)
-    #     clue_set_view.fill(sub_board_view)
-    #   end
-
-    #   previous_clue_index = clue_index
-    #   previous_board_clue = board_clue
-    # end
-
-    # From after the last match
+    board_clue_index = matches.keys.last
+    clue_index = matches[board_clue_index]
+    if clue_index == csv.length - 1
+      board_clue = board_clue_set[board_clue_index]
+      clue = csv[clue_index]
+      (board_clue.solution + clue.count...length).each { |i| self[i] = Puzzle::BLANK }
+    end
   end
 
+  def cap_solved_clues(csv, board_clue_set, matches)
+    matches.each do |board_clue_index, clue_index|
+      board_clue = board_clue_set[board_clue_index]
+      next unless board_clue.count == csv[clue_index].count
 
-    # # Fill gaps between solved that match the same clue.
+      if clue_index > 0 && csv[clue_index - 1].colour == board_clue.colour
+        self[board_clue.solution - 1] = Puzzle::BLANK
+      end
 
-    # clue_set.each_with_index do |clue, clue_index|
-    #   # Find the available range for the clue. Begin by finding any solved clues that bound this
-    #   # clue.
+      if clue_index < csv.length - 1 && csv[clue_index + 1].colour == board_clue.colour
+        self[board_clue.to] = Puzzle::BLANK
+      end
+    end
+  end
 
   def to_s
     (0...length).map { |i| self[i].nil? ? Puzzle::FANCY_UNKNOWN : self[i].to_s }.join

@@ -22,7 +22,7 @@ class ClueSetView
   def [](index)
     raise "Out of bounds #{index} in [#{@from}, #{@to})" unless in_bounds?(index)
 
-    @clue_set[index]
+    @clue_set[@from + index]
   end
 
   def in_bounds?(index)
@@ -31,6 +31,40 @@ class ClueSetView
 
   def reverse
     self.class.new(@clue_set.reverse)
+  end
+
+  def view(from, to = length)
+    self.class.new(@clue_set, from: @from + from, to: @from + to)
+  end
+
+  def spacer(index, before:)
+    if before
+      if index == 0
+        0
+      else
+        self[index - 1].colour == self[index].colour ? 1 : 0
+      end
+    elsif index == length - 1
+      0
+    else
+      self[index + 1].colour == self[index].colour ? 1 : 0
+    end
+  end
+
+  def limit(index, len, before:)
+    if before
+      if index == 0
+        0
+      else
+        c = self[index - 1]
+        c.colour == self[index].colour ? nil : c.to
+      end
+    elsif index == length - 1
+      len
+    else
+      c = self[index + 1]
+      c.colour == self[index].colour ? nil : c.solution
+    end
   end
 
   # Calculates the minimum length of all of the clues in this view.
@@ -45,6 +79,8 @@ class ClueSetView
     sum
   end
 
+  # TODO: need a way to better accomodate for spaces in determining ranges. Like eliminating clue
+  # ranges when they can't fit together inside a view section.
   def ranges(board_view)
     diff = board_view.length - sum
     offset = 0
@@ -116,7 +152,8 @@ class ClueSetView
           next unless self.class.contains?(range.first, range.last, board_clue_from, board_clue_to)
 
           # Determine if the board clue is an exclusive match with the range.
-          exclusive = board_clue_from - range.first < 2 && range.last - board_clue_to < 2
+          exclusive = clue_ranges.one? &&
+            board_clue_from - range.first < 2 && range.last - board_clue_to < 2
 
           if exclusive
             raise "Range already has an exclusive match" if matches[board_clue_index].is_a?(Integer)
@@ -130,13 +167,61 @@ class ClueSetView
       end
     end
 
-    matches.transform_values do |v|
-      if v.is_a?(Array)
-        v.one? ? v.first : nil
-      else
-        v
+    self.class.resolve_multiple_matches(matches)
+  end
+
+  def self.resolve_multiple_matches(matches)
+    matches = matches.to_a
+
+    loop do
+      change = false
+
+      # Change single elements arrays to ints
+      matches.each do |m|
+        next unless m[1].is_a?(Array) && m[1].one?
+
+        m[1] = m[1].first
+        change = true
       end
-    end.compact
+
+      # Remove array elements where their values are less than previous ints
+      min = nil
+      matches.each do |_bi, ci|
+        if ci.is_a?(Array)
+          next if min.nil?
+
+          ci.filter! do |e|
+            next true if e >= min
+
+            change = true
+            false
+          end
+        else
+          min = ci
+        end
+      end
+
+      # Remove array elements where their values are greater than subsequent ints
+      max = nil
+      matches.reverse_each do |_bi, ci|
+        if ci.is_a?(Array)
+          next if max.nil?
+
+          ci.filter! do |e|
+            next true if e <= max
+
+            change = true
+            false
+          end
+        else
+          max = ci
+        end
+      end
+
+      break unless change
+    end
+
+    matches.select { |m| m[1].is_a?(Integer) }.to_h
   end
 
   def match_old(board_view)
@@ -196,21 +281,6 @@ class ClueSetView
       last_clue_colour = clue.colour
     end
   end
-
-  # def fill_with_spaces(board_view, )
-  #   # diff = board_view.length - sum
-  #   # offset = 0
-  #   # last_clue_colour = nil
-  #   # each do |clue|
-  #   #   if clue.colour == last_clue_colour
-  #   #     board_view[offset] = :_ if diff == 0
-  #   #     offset += 1
-  #   #   end
-  #   #   (diff...clue.count).each { |i| board_view[offset + i] = clue.colour }
-  #   #   offset += clue.count
-  #   #   last_clue_colour = clue.colour
-  #   # end
-  # end
 
   def to_s
     "[#{map(&:to_s).join(',')}]"
