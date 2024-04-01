@@ -12,7 +12,7 @@ class Puzzle
     @top_clue_sets = top_clue_sets.map { |cs| ClueSet.new(cs) }
     @left_clue_sets = left_clue_sets.map { |cs| ClueSet.new(cs) }
     @colour_definitions = colour_definitions.transform_keys(&:to_sym).transform_values(&:to_sym)
-    @board = Board.new(@left_clue_sets.length, @top_clue_sets.length, @colour_definitions)
+    @board = Board.new(@left_clue_sets.length, @top_clue_sets.length)
 
     # Validations:
     # The counts for each colour are the same for the rows and cols.
@@ -65,7 +65,7 @@ class Puzzle
     fn.call(@top_clue_sets, false)
   end
 
-  def loop_until_clean
+  def iterate(until_clean:)
     @board.dirtify
 
     loop do
@@ -80,6 +80,7 @@ class Puzzle
         # binding.pry
       end
 
+      break if !until_clean
       break unless @board.any_dirty?
     end
   end
@@ -100,6 +101,7 @@ class Puzzle
     # TODO: use the "solved" attribute in the clues to know what clues are done, and be able to
     # split views into sub-views.
     # Can also do processing prior to ranges to mark areas of the board that are unavailable.
+    # binding.pry
   end
 
   def solved?
@@ -109,7 +111,7 @@ class Puzzle
   def fill_rows_by_counting
     # Fills cells by trying to match clues to existing board values, and then creating views of
     # corresponding rows/cols and clues, and using the fill method to try and find more values.
-    loop_until_clean do |cs, bv|
+    iterate(until_clean: true) do |cs, bv|
       cs.view.fill(bv)
     end
   end
@@ -117,14 +119,89 @@ class Puzzle
   def fill_rows_by_clue_matching
     @board.dirtify
 
-    loop_until_clean do |cs, bv|
+    iterate(until_clean: true) do |cs, bv|
       bv.fill_from_matches(cs.view)
       # @board.draw
       # binding.pry
     end
   end
 
-  def draw(colour: false)
-    @board.draw(colour: colour)
+  def fill_rows_by_clue_matching_bfi
+    @board.dirtify
+
+    iterate(until_clean: false) do |cs, bv|
+      bv.fill_from_matches(cs.view, bfi: true)
+      # @board.draw
+      # binding.pry
+    end
+  end
+
+  #
+  # Drawing
+  #
+  def draw(colour: false, rotate: false)
+    colour && @colour_definitions ? draw_with_color : draw_without_color(rotate: rotate)
+  end
+
+  def draw_without_color(rotate: false)
+    if rotate
+      col_range = (0...@left_clue_sets.length)
+      row_range = (@top_clue_sets.length - 1..0).step(-1)
+      is_row = false
+      clues = @top_clue_sets
+    else
+      col_range = (0...@top_clue_sets.length)
+      row_range = (0...@left_clue_sets.length)
+      is_row = true
+      clues = @left_clue_sets
+    end
+
+    puts "   #{col_range.map { (_1 + 1) % 10 }.join}"
+    puts "   #{'-' * col_range.size}"
+
+    row_range.each do |row|
+      board = col_range.map do |col|
+        (is_row ? @board[row, col] : @board[col, row]) || Puzzle::FANCY_UNKNOWN
+      end.join
+      dirty = dirty_render(@board.dirty?(is_row, row))
+      puts "#{(row + 1) % 10}: #{board} #{dirty} #{clues[row]}"
+    end
+
+    puts ""
+    puts "   #{col_range.map { dirty_render(@board.dirty?(!is_row, _1)) }.join}"
+  end
+
+  def draw_with_color
+    indices = (0...@col_count).map do |i|
+      s = ((i + 1) % 100).to_s.rjust(2)
+      i.even? ? s : Rainbow(s).orchid
+    end.join
+
+    puts "    #{indices}"
+    puts "    #{'-' * @col_count * 2}"
+
+    @board.each_with_index do |row, i|
+      row_str = row.map do |e|
+        if e.nil?
+          " #{Puzzle::FANCY_UNKNOWN}"
+        elsif @colour_definitions && @colour_definitions[e]
+          Rainbow("  ").bg(@colour_definitions[e])
+        else
+          e.to_s * 2
+        end
+      end.join
+
+      index = ((i + 1) % 100).to_s.rjust(2)
+
+      puts "#{i.even? ? index : Rainbow(index).orchid}: #{row_str} #{dirty_render(@dirty_rows[i])}"
+    end
+    puts ""
+    puts "    #{@dirty_cols.map { |i| " #{dirty_render(i)}" }.join}"
+  end
+
+  def dirty_render(value)
+    return Rainbow("✓").green if value.nil?
+
+    value ? Rainbow("X").darkorchid : " "
   end
 end

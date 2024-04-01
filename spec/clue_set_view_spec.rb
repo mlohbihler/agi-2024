@@ -18,44 +18,30 @@ describe ClueSetView do
     end
 
     it "works" do
-      expect(ranges("2b,3b,2b", "    .... b..    bb  ")).to(eq([
-        [4...8, 9...11],
-        [9...12],
-        [16...18],
-      ]))
-      expect(ranges("2a,2a,2a", "..a...a...")).to(eq([[(1...4)], [(5...7)], [(6...10)]]))
-      expect(ranges("2a,2a,2a", "..a ..a...")).to(eq([[(1...3)], [(5...7)], [(6...10)]]))
+      expect(ranges("2b,3b,2b", "    .... b..    bb  ")).to(eq([[4...8], [9...12], [16...18]]))
+      expect(ranges("2a,2a,2a", "..a...a...")).to(eq([[(1...4)], [(5...7)], [(8...10)]]))
+      expect(ranges("2a,2a,2a", "..a ..a...")).to(eq([[(1...3)], [(5...7)], [(8...10)]]))
       expect(ranges("3a,2a,5b,1b,3a", "....aa....bbb.b....")).to(eq([
-        [(0...6)],
-        [(4...9)],
+        [(0...5)],
+        [(4...8)],
         [(8...13)],
         [(14...15)],
         [(15...19)],
       ]))
       expect(ranges("3a,2a,5b,1b,3a", "...aa...b.b.b.....aa.")).to(eq([
-        [(2...6)],
+        [(2...5)],
         [(6...8)],
-        [(6...15)],
-        [(12...18)],
-        [(13...21)],
+        [(8...15)],
+        [(14...18)],
+        [(15...21)],
       ]))
       expect(ranges("7a,2b,6a", "a.a.a.a....b...aa...a")).to(eq([[(0...11)], [(7...15)], [(12...21)]]))
       expect(ranges("1a,1a", " .a......")).to(eq([[(2...7)], [(4...9)]]))
-      expect(ranges("4a,2a,2a,2a", "....a...a........a")).to(eq([
-        [1...7],
-        [7...12],
-        [8...15],
-        [11...18],
-      ]))
-      expect(ranges("4a,2a,2a,2a", ".aaaa...a........a")).to(eq([
-        [1...5],
-        [7...12],
-        [8...15],
-        [11...18],
-      ]))
+      expect(ranges("4a,2a,2a,2a", "....a...a........a")).to(eq([[1...7], [7...12], [10...15], [13...18]]))
+      expect(ranges("4a,2a,2a,2a", ".aaaa...a........a")).to(eq([[1...5], [7...12], [10...15], [13...18]]))
       expect(ranges("2b,2r,1b,4a", "..........rb..aa....")).to(eq([
-        [0...10, 11...13],
-        [2...11, 12...14],
+        [0...9],
+        [2...11],
         [4...10, 11...14],
         [5...10, 12...18],
       ]))
@@ -63,11 +49,79 @@ describe ClueSetView do
         [0...5],
         [4...12],
         [12...18],
-        [16...20],
+        [18...20],
       ]))
       expect(ranges("3a,3b", ".....   ...")).to(eq([[0...5], [8...11]]))
       expect(ranges("3a,2a", ".....   ...")).to(eq([[0...5], [8...11]]))
       expect(ranges("3a,2a", ".....   ......")).to(eq([[0...5, 8...11], [8...14]]))
+    end
+
+    it "uses solved colour information to improve range accuracy" do
+      # expect(ranges("1b,3g,1b,3g,2b,2g,6b", ".gg.bggg..g.bb....   ... ............")).to(eq([
+      #   [0...1, 4...5, 8...10, 15...18],
+      #   [1...4, 5...12, 14...18],
+      #   [4...5, 8...10, 15...18, 21...24],
+      #   [5...12, 14...18, 21...24],
+      #   [8...10, 12...18, 21...24, 25...29],
+      #   [10...12, 14...18, 21...24, 25...31],
+      #   [12...18, 25...37],
+      # ]))
+      expect(ranges("1b,1g,1b,3g(5),1b,3g,1b,3g,2b,2g,6b", ".....ggg.gg.bggg..g.bb....   ... ............")).to(eq([
+        [0...3],
+        [1...4],
+        [2...5, 8...9, 12...13],
+        [5...12, 13...17],
+        [8...9, 12...13, 16...18],
+        [9...12, 13...20, 22...25],
+        [12...13, 16...18, 23...26],
+        [13...20, 22...26, 29...32],
+        [16...18, 20...26, 29...32, 33...37],
+        [18...20, 22...26, 29...32, 33...39],
+        [20...26, 33...45],
+      ]))
+    end
+  end
+
+  context "#limit_range_overlap" do
+    def call(clues, ranges)
+      csv = ClueSet.new(clues).view
+      csv.limit_range_overlap(ranges)
+      ranges
+    end
+
+    it "works" do
+      expect(call("2b,3b", [[4...8, 9...11], [9...12]])).to(eq([[4...8], [9...12]]))
+      expect(call("2a,2a", [[5...7], [6...10]])).to(eq([[5...7], [8...10]]))
+      expect(call(
+        "1b,1g,1b,3g(5),1b,3g,1b,3g,2b,2g,6b",
+        [
+          [0...5, 8...9, 12...13, 16...18],
+          [1...4, 18...19, 22...23],
+          [2...5, 8...9, 12...13, 16...18, 23...24],
+          [5...12, 13...20, 22...26],
+          [8...9, 12...13, 16...18, 23...26],
+          [9...12, 13...20, 22...26],
+          [12...13, 16...18, 23...26, 29...32],
+          [13...20, 22...26, 29...32],
+          [16...18, 20...26, 29...32, 33...37],
+          [17...20, 22...26, 29...32, 33...39],
+          [19...26, 33...45],
+        ]
+      )).to(eq(
+        [
+          [0...3],
+          [1...4],
+          [2...5, 8...9, 12...13],
+          [5...12, 13...17],
+          [8...9, 12...13, 16...18],
+          [9...12, 13...20, 22...25],
+          [12...13, 16...18, 23...26],
+          [13...20, 22...26, 29...32],
+          [16...18, 20...26, 29...32, 33...37],
+          [18...20, 22...26, 29...32, 33...39],
+          [20...26, 33...45],
+        ]
+      ))
     end
   end
 
@@ -82,14 +136,14 @@ describe ClueSetView do
     it "works" do
       matches("3a,2a,5b,1b,3a", "..................")
       matches("2a,2a,2a", "..a...a...")
-      matches("3a,2a,5b,1b,3a", "....aa....bbb.b....", { 1 => 2, 2 => 3 })
-      matches("3a,2a,5b,1b,3a", "...aa...b.b.b.....aa.", { 0 => 0, 1 => 2, 2 => 2, 4 => 4 })
+      matches("3a,2a,5b,1b,3a", "....aa....bbb.b....")
+      matches("3a,2a,5b,1b,3a", "...aa...b.b.b.....aa.")
       matches("7a,2b,6a", "aaaaaaa........")
       matches("7a,2b,6a", "a.a.a.a....b...aa...a")
       matches("10a,2a", ".a.a...a............")
 
       matches("2b,2r,1b,4a", "..........rb..aa....")
-      matches("1b,7r,5b,1b", ".....rrrrrr..b..b...", { 0 => 1, 1 => 2 })
+      matches("1b,7r,5b,1b", ".....rrrrrr..b..b...")
       matches("3b", "          .b..      ")
       matches("4b,1b,3b", "...b..b...b .b.b... ", { 0 => 0, 5 => 2 })
     end
@@ -103,12 +157,12 @@ describe ClueSetView do
       matches("1a,1a", ".........a")
       matches("4a,2a,2a,2a", "....a............a")
       matches("4a,2a,2a,2a", "a..............a..")
-      matches("4a,2a,2a,2a", "....a...a........a", { 0 => 0, 2 => 3 })
-      matches("4a,2a,2a,2a", ".aaaa...a........a", { 0 => 0, 2 => 3 })
+      matches("4a,2a,2a,2a", "....a...a........a")
+      matches("4a,2a,2a,2a", ".aaaa...a........a")
     end
 
     it "matches correctly when there are spaces" do
-      matches("2b,3b,2b", "    .... b..    bb  ", { 4 => 2 })
+      matches("2b,3b,2b", "    .... b..    bb  ")
       matches("1a,1a", " .a......")
       matches("1a,1a", " ......a. ")
     end
@@ -127,19 +181,6 @@ describe ClueSetView do
       expect(board_view.to_s).to eq("a a a a a")
     end
   end
-
-  # context "#fill_when_spaces" do
-  #   it "works" do
-  #     board_view = Board.from_strings(["  .  "]).view(0, true)
-  #     clue_set_view = ClueSetView.new(ClueSet.new("1a"))
-  #     binding.pry
-  #     # board_view.fill_in_between_matches(clue_set, board_view.to_clues, clue_set.match(board_view))
-  #     # expect(board_view.to_s).to(eq("aa.ax.."))
-
-  #     clue_set_view.fill_with_spaces(board_view)
-  #     expect(board_view.to_s).to eq(".....rrr....bbbb....")
-  #   end
-  # end
 
   context "#match_bfi" do
     def matches(clues, board)

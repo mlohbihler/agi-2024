@@ -29,10 +29,6 @@ class ClueSetView
     index >= 0 && index < length
   end
 
-  def reverse
-    self.class.new(@clue_set.reverse)
-  end
-
   def view(from, to = length)
     self.class.new(@clue_set, from: @from + from, to: @from + to)
   end
@@ -87,7 +83,8 @@ class ClueSetView
     diff -= padding.first + board_view.length - padding.last
     offset = padding.first
     last_clue_colour = nil
-    map do |clue|
+
+    ranges = map do |clue|
       offset += 1 if clue.colour == last_clue_colour
       range = (offset...offset + clue.count + diff)
       offset += clue.count
@@ -133,6 +130,52 @@ class ClueSetView
         end
         range if range.size >= clue.count
       end.compact
+    end
+
+    limit_range_overlap(ranges)
+    ranges
+  end
+
+  def limit_range_overlap(ranges)
+    # Limit ranges so that they don't invalidly overlap.
+    # Left to right
+    (0...ranges.length - 1).each do |ranges_index|
+      left_ranges = ranges[ranges_index]
+      right_ranges = ranges[ranges_index + 1]
+      left_clue = self[ranges_index]
+      right_clue = self[ranges_index + 1]
+      spacer = left_clue.colour == right_clue.colour ? 1 : 0
+
+      min = left_ranges.first.first + spacer + left_clue.count
+      # binding.pry
+      while right_ranges.first.first < min
+        range = (min...right_ranges.first.last)
+        if range.size < right_clue.count
+          right_ranges.shift
+        else
+          right_ranges[0] = range
+        end
+      end
+    end
+
+    # Right to left
+    (ranges.length - 2..0).step(-1).each do |ranges_index|
+      left_ranges = ranges[ranges_index]
+      right_ranges = ranges[ranges_index + 1]
+      left_clue = self[ranges_index]
+      right_clue = self[ranges_index + 1]
+      spacer = left_clue.colour == right_clue.colour ? 1 : 0
+
+      max = right_ranges.last.last - spacer - right_clue.count
+      # binding.pry
+      while left_ranges.last.last > max
+        range = (left_ranges.last.first...max)
+        if range.size < left_clue.count
+          left_ranges.pop
+        else
+          left_ranges[-1] = range
+        end
+      end
     end
   end
 
@@ -237,49 +280,6 @@ class ClueSetView
     end
   end
 
-  def match_old(board_view)
-    there = match_one_direction(self, board_view.to_clues)
-
-    reverse_solved = board_view.to_clues(reverse: true)
-    back = match_one_direction(reverse, reverse_solved)
-
-    # Un-reverse the reversed clue indices
-    self_extent = length - 1
-    view_extent = reverse_solved.length - 1
-    back = back.to_h { |k, v| [view_extent - k, self_extent - v] }
-
-    there.keep_if { |k, v| back[k] == v }
-  end
-
-  def match_one_direction(clues, board_clues)
-    si = 0
-    result = {}
-
-    clues.each_with_index do |c, ci|
-      # Skip leading spaces
-      si += 1 while board_clues[si]&.colour == Puzzle::BLANK
-
-      start = nil
-      while si < board_clues.length
-        s = board_clues[si]
-        break unless s.colour == c.colour || s.colour == Puzzle::BLANK
-
-        start ||= s
-        end_offset = s.solution + s.count - start.solution
-        break if end_offset > c.count
-
-        result[si] = ci if s.colour != Puzzle::BLANK
-        si += 1
-      end
-    end
-
-    # Skip remaining spaces
-    si += 1 while board_clues[si]&.colour == Puzzle::BLANK
-    raise "Unable to match clue sets #{clues} and #{board_clues}" if si < board_clues.length
-
-    result
-  end
-
   def fill(board_view)
     diff = board_view.length - sum
     offset = 0
@@ -302,7 +302,7 @@ class ClueSetView
   def match_bfi(board_view)
     solutions = find_all_solutions_bfi(board_view)
     matches = {}
-    board_view.to_clues.each.each_with_index do |board_clue, board_clue_index|
+    board_view.to_clues.each_with_index do |board_clue, board_clue_index|
       next if board_clue.colour == Puzzle::BLANK
 
       board_clue_from = board_clue.solution
@@ -347,10 +347,16 @@ class ClueSetView
   def find_all_solutions_bfi(board_view)
     max_first_location = board_view.length - sum
 
+    # freedom = board_view.length - sum + 1
+    # clues = length
+    # puts "freedom: #{freedom}, clues: #{clues}, complexity: #{freedom**clues}"
+    # iterations = 0
+
     solutions = []
     locations = []
     move_last_clue = false
     loop do
+      # iterations += 1
       if move_last_clue
         # Increment the current location
         locations[-1] += 1
@@ -401,6 +407,8 @@ class ClueSetView
         locations.pop
       end
     end
+
+    # puts "iterations: #{iterations}"
 
     solutions
   end

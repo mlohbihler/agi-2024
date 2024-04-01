@@ -13,7 +13,7 @@ require "./puzzle"
 # puzzle = Puzzle.from_file("ladybug.20x20")
 puzzle = Puzzle.from_file("pumpkins.45x35")
 puzzle.solve
-puzzle.draw
+puzzle.draw(rotate: true)
 # puzzle.draw(colour: true)
 puts puzzle.solved? ? Rainbow(" ### Solved").green : Rainbow("### Not solved").red
 puts

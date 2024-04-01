@@ -33,10 +33,6 @@ class ClueSet
     @clues == other.instance_variable_get(:@clues)
   end
 
-  def reverse
-    self.class.new(@clues.reverse)
-  end
-
   def to_s
     "[#{@clues.join(',')}]"
   end
@@ -46,6 +42,6 @@ class ClueSet
   end
 
   def solved?
-    all? { |c| c.solved? }
+    all?(&:solved?)
   end
 end

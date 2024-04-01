@@ -5,13 +5,12 @@ require "./puzzle"
 class Board
   attr_reader :row_count, :col_count
 
-  def initialize(row_count, col_count, colour_definitions = nil)
+  def initialize(row_count, col_count)
     @board = Array.new(row_count) { Array.new(col_count) }
     @dirty_rows = Array.new(row_count) { true }
     @dirty_cols = Array.new(col_count) { true }
     @row_count = row_count
     @col_count = col_count
-    @colour_definitions = colour_definitions
   end
 
   def self.from_strings(strs)
@@ -78,55 +77,5 @@ class Board
     else
       @dirty_cols[index] = value
     end
-  end
-
-  def draw(colour: false)
-    colour && @colour_definitions ? draw_with_color : draw_without_color
-  end
-
-  def draw_without_color
-    puts "   #{(0...@col_count).map { |i| (i + 1) % 10 }.join}"
-    puts "   #{'-' * @col_count}"
-
-    @board.each_with_index do |row, i|
-      puts "#{(i + 1) % 10}: #{row.map { |e| e.nil? ? Puzzle::FANCY_UNKNOWN : e.to_s }.join} #{dirty_render(@dirty_rows[i])}"
-    end
-
-    puts ""
-    puts "   #{@dirty_cols.map { |i| dirty_render(i) }.join}"
-  end
-
-  def draw_with_color
-    indices = (0...@col_count).map do |i|
-      s = ((i + 1) % 100).to_s.rjust(2)
-      i.even? ? s : Rainbow(s).orchid
-    end.join
-
-    puts "    #{indices}"
-    puts "    #{'-' * @col_count * 2}"
-
-    @board.each_with_index do |row, i|
-      row_str = row.map do |e|
-        if e.nil?
-          " #{Puzzle::FANCY_UNKNOWN}"
-        elsif @colour_definitions && @colour_definitions[e]
-          Rainbow("  ").bg(@colour_definitions[e])
-        else
-          e.to_s * 2
-        end
-      end.join
-
-      index = ((i + 1) % 100).to_s.rjust(2)
-
-      puts "#{i.even? ? index : Rainbow(index).orchid}: #{row_str} #{dirty_render(@dirty_rows[i])}"
-    end
-    puts ""
-    puts "    #{@dirty_cols.map { |i| " #{dirty_render(i)}" }.join}"
-  end
-
-  def dirty_render(value)
-    return Rainbow("✓").green if value.nil?
-
-    value ? Rainbow("X").darkorchid : " "
   end
 end

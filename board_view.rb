@@ -110,13 +110,13 @@ class BoardView
     self.class.new(@board, @index, @is_row, @from + from, @from + to)
   end
 
-  def fill_from_matches(csv)
+  def fill_from_matches(csv, bfi: false)
     board_clue_set = to_clues
 
     # TODO: there is potential information in the ranges, especially when there are spaces in the
     # board. Get the ranges separately here and fill spaces using that information.
 
-    matches = csv.match(self)
+    matches = bfi ? csv.match_bfi(self) : csv.match(self)
 
     fill_in_between_matches(csv, board_clue_set, matches)
     fill_from_edges(csv, board_clue_set, matches)

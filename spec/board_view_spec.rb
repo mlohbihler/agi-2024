@@ -49,10 +49,10 @@ describe BoardView do
   end
 
   context "#fill_from_matches" do
-    def call(board, clues)
+    def call(board, clues, bfi: false)
       board_view = Board.from_strings([board]).view(0, true)
       csv = ClueSet.new(clues).view
-      board_view.fill_from_matches(csv)
+      board_view.fill_from_matches(csv, bfi: bfi)
       board_view.to_s
     end
 
@@ -61,7 +61,13 @@ describe BoardView do
       expect(call("......     ...", "4a,2a")).to(eq("......     ..."))
     end
 
-    it "works" do
+    it "works using bfi" do
+      expect(call(".....ggg.gg.bggg..g.bb....   ... ............", "1b,1g,1b,3g(5),1b,3g,1b,3g,2b,2g,6b", bfi: true)).
+        to(eq(    ".....gggbgg.bgggbbg.bbbbb.                   "))
+      expect(call(".....gggbgg.bgggbbg.bbbbb.                   ", "1b,1g,1b,3g(5),1b,3g,1b,3g,2b,2g,6b")).
+        to(eq(    ".....gggbgggbgggbbggbbbbb.                   "))
+      expect(call(".....gggbgggbgggbbggbbbbb.                   ", "1b,1g,1b,3g(5),1b,3g,1b,3g,2b,2g,6b")).
+        to(eq(    ".....gggbgggbgggbbggbbbbbb                   "))
     end
   end
 

@@ -7,13 +7,17 @@ class Clue
 
   def initialize(count, colour = nil, solution = nil)
     if count.is_a?(String)
-      @count = count[0..-2].to_i
-      @colour = count[-1].to_sym
+      # Check for a solution
+      matches = count.scan(/(\d+)(\w)(\((\d+)\))?/).first
+
+      @count = matches[0].to_i
+      @colour = matches[1].to_sym
+      @solution = matches[3]&.to_i
     else
       @count = count
       @colour = colour
+      @solution = solution
     end
-    @solution = solution
   end
 
   def solve(index)
