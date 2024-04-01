@@ -21,7 +21,7 @@ class Clue
   end
 
   def solved?
-    @solution.present?
+    !@solution.nil?
   end
 
   def to

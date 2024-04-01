@@ -58,6 +58,10 @@ class BoardView
     @board.clean(@is_row, @index)
   end
 
+  def solve
+    @board.solve(@is_row, @index)
+  end
+
   def padding
     left = nil
     right = nil
@@ -75,6 +79,10 @@ class BoardView
 
   def trim
     view(*padding)
+  end
+
+  def to_s
+    (0...length).map { |i| self[i].nil? ? Puzzle::UNKNOWN : self[i].to_s }.join
   end
 
   def to_clues
@@ -173,7 +181,6 @@ class BoardView
   def fill_from_edges(csv, board_clue_set, matches)
     return if matches.empty?
 
-    binding.pry
     bcsv = board_clue_set.view
     matches.each_with_index do |(board_clue_index, clue_index)|
       board_clue = board_clue_set[board_clue_index]
@@ -220,9 +227,5 @@ class BoardView
         self[board_clue.to] = Puzzle::BLANK
       end
     end
-  end
-
-  def to_s
-    (0...length).map { |i| self[i].nil? ? Puzzle::FANCY_UNKNOWN : self[i].to_s }.join
   end
 end

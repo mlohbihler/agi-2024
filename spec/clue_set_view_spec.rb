@@ -18,6 +18,11 @@ describe ClueSetView do
     end
 
     it "works" do
+      expect(ranges("2b,3b,2b", "    .... b..    bb  ")).to(eq([
+        [4...8, 9...11],
+        [9...12],
+        [16...18],
+      ]))
       expect(ranges("2a,2a,2a", "..a...a...")).to(eq([[(1...4)], [(5...7)], [(6...10)]]))
       expect(ranges("2a,2a,2a", "..a ..a...")).to(eq([[(1...3)], [(5...7)], [(6...10)]]))
       expect(ranges("3a,2a,5b,1b,3a", "....aa....bbb.b....")).to(eq([
@@ -35,7 +40,7 @@ describe ClueSetView do
         [(13...21)],
       ]))
       expect(ranges("7a,2b,6a", "a.a.a.a....b...aa...a")).to(eq([[(0...11)], [(7...15)], [(12...21)]]))
-      expect(ranges("1a,1a", " .a......")).to(eq([[(2...7)], [(2...9)]]))
+      expect(ranges("1a,1a", " .a......")).to(eq([[(2...7)], [(4...9)]]))
       expect(ranges("4a,2a,2a,2a", "....a...a........a")).to(eq([
         [1...7],
         [7...12],
@@ -68,7 +73,7 @@ describe ClueSetView do
 
   context "#match" do
     def matches(clues, board_input, expected = nil)
-      bv = Board.from_strings([board_input]).view(0, true).trim
+      bv = Board.from_strings([board_input]).view(0, true)
       csv = ClueSet.new(clues).view
       csv.match_bfi(bv)
       expect(csv.match(bv)).to eq(expected || csv.match_bfi(bv))
@@ -103,6 +108,7 @@ describe ClueSetView do
     end
 
     it "matches correctly when there are spaces" do
+      matches("2b,3b,2b", "    .... b..    bb  ", { 4 => 2 })
       matches("1a,1a", " .a......")
       matches("1a,1a", " ......a. ")
     end
@@ -113,7 +119,7 @@ describe ClueSetView do
       clue_set_view = ClueSetView.new(ClueSet.new("1b,7r,8b"))
       board_view = create_board_view("....................")
       clue_set_view.fill(board_view)
-      expect(board_view.to_s).to eq("·····rrr····bbbb····")
+      expect(board_view.to_s).to eq(".....rrr....bbbb....")
 
       clue_set_view = ClueSetView.new(ClueSet.new("1a,1a,1a,1a,1a,"))
       board_view = create_board_view(".........")
@@ -131,7 +137,7 @@ describe ClueSetView do
   #     # expect(board_view.to_s).to(eq("aa.ax.."))
 
   #     clue_set_view.fill_with_spaces(board_view)
-  #     expect(board_view.to_s).to eq("·····rrr····bbbb····")
+  #     expect(board_view.to_s).to eq(".....rrr....bbbb....")
   #   end
   # end
 

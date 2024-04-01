@@ -11,8 +11,8 @@ class Puzzle
   def initialize(top_clue_sets, left_clue_sets, colour_definitions)
     @top_clue_sets = top_clue_sets.map { |cs| ClueSet.new(cs) }
     @left_clue_sets = left_clue_sets.map { |cs| ClueSet.new(cs) }
-    @board = Board.new(@left_clue_sets.length, @top_clue_sets.length)
-    @colour_definitions = colour_definitions.transform_keys(&:to_sym)
+    @colour_definitions = colour_definitions.transform_keys(&:to_sym).transform_values(&:to_sym)
+    @board = Board.new(@left_clue_sets.length, @top_clue_sets.length, @colour_definitions)
 
     # Validations:
     # The counts for each colour are the same for the rows and cols.
@@ -74,6 +74,10 @@ class Puzzle
 
         bv.clean
         yield(cs, bv)
+
+        bv.solve if cs.solved?
+        # draw
+        # binding.pry
       end
 
       break unless @board.any_dirty?
@@ -94,7 +98,12 @@ class Puzzle
     fill_rows_by_clue_matching
 
     # TODO: use the "solved" attribute in the clues to know what clues are done, and be able to
-    # split views into sub-views
+    # split views into sub-views.
+    # Can also do processing prior to ranges to mark areas of the board that are unavailable.
+  end
+
+  def solved?
+    @board.solved?
   end
 
   def fill_rows_by_counting
@@ -110,12 +119,12 @@ class Puzzle
 
     loop_until_clean do |cs, bv|
       bv.fill_from_matches(cs.view)
-      @board.draw
-      binding.pry
+      # @board.draw
+      # binding.pry
     end
   end
 
-  def draw
-    @board.draw
+  def draw(colour: false)
+    @board.draw(colour: colour)
   end
 end

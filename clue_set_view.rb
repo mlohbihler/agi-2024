@@ -83,7 +83,9 @@ class ClueSetView
   # ranges when they can't fit together inside a view section.
   def ranges(board_view)
     diff = board_view.length - sum
-    offset = 0
+    padding = board_view.padding
+    diff -= padding.first + board_view.length - padding.last
+    offset = padding.first
     last_clue_colour = nil
     map do |clue|
       offset += 1 if clue.colour == last_clue_colour
@@ -137,7 +139,8 @@ class ClueSetView
   def match(board_view)
     ranges = ranges(board_view)
     matches = {}
-    board_view.to_clues.each.each_with_index do |board_clue, board_clue_index|
+    bvcs = board_view.to_clues
+    bvcs.each.each_with_index do |board_clue, board_clue_index|
       next if board_clue.colour == Puzzle::BLANK
 
       board_clue_from = board_clue.solution
@@ -167,7 +170,7 @@ class ClueSetView
       end
     end
 
-    self.class.resolve_multiple_matches(matches)
+    mark_solved_clues(self.class.resolve_multiple_matches(matches), bvcs)
   end
 
   def self.resolve_multiple_matches(matches)
@@ -222,6 +225,16 @@ class ClueSetView
     end
 
     matches.select { |m| m[1].is_a?(Integer) }.to_h
+  end
+
+  def mark_solved_clues(matches, bvcs)
+    matches.each do |(board_clue_index, clue_index)|
+      board_clue = bvcs[board_clue_index]
+      clue = self[clue_index]
+      next unless board_clue.count == clue.count
+
+      clue.solve(board_clue.solution)
+    end
   end
 
   def match_old(board_view)

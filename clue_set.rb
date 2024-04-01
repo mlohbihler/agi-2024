@@ -44,4 +44,8 @@ class ClueSet
   def view(from = 0, to = length)
     ClueSetView.new(self, from: from, to: to)
   end
+
+  def solved?
+    all? { |c| c.solved? }
+  end
 end

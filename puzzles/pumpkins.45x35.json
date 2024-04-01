@@ -10,6 +10,7 @@
     "2b,3b,2b,2b,3g,2b,2g,4b,1g,2b",
     "1b,1g,2b,1g,1b,1b,1b,4g,1b,2g,2b,3g,2b",
     "1b,2g,1b,1g,2b,2b,1b,6g,1b,6g,2b",
+
     "2b,3g,1b,1g,2b,3b,15g,2b",
     "1b,5g,2b,1g,1b,2b,2g,2b,3g,5b,4g,2b",
     "1b,2g,1b,3g,4b,3b,4g,5b,3g,4b,2g,1b",
@@ -20,6 +21,7 @@
     "1b,2g,2b,2g,2b,1r,4o,2r,1b,3g,1b,5g,1b,1g,2b",
     "1b,1g,2b,3g,1b,1r,3o,3r,3b,2g,2b,7g,2b",
     "3b,4g,1b,1r,3o,1r,5b,2g,2b,2g,4b,3g,1b",
+
     "1b,1b,2g,3b,3o,1r,2b,3y,2b,1g,3b,1g,2b,1r,4b,1b",
     "1b,2g,1b,1b,3o,2b,1y,3o,1y,2b,2o,2b,1g,1b,1r,2b,1b",
     "1b,1g,2b,1b,1o,1b,1o,1b,6o,4r,2o,2b,1o,1r,1b,1b,1b",
@@ -30,6 +32,7 @@
     "3b,4g,1b,14o,1b,4b",
     "2b,5g,1b,14o,2b,4b",
     "1b,2g,2b,1g,3b,2y,7o,2y,1b,1o,1b,4b",
+
     "1b,1g,2b,1o,2b,1g,1b,1r,1b,3y,4o,2y,1b,1r,1o,1b,5b",
     "4b,1b,1o,3b,1o,1r,2b,6y,2b,1r,1o,1b,5b",
     "3b,1b,2o,1b,2o,2r,2b,3y,3b,1r,2o,2b,5b",
@@ -40,6 +43,7 @@
     "2b,2b,1b,1r,1o,1r,2b,2y,5o,2y,1b,1r,1o,1r,1b,4b",
     "1b,4b,2b,1r,1o,1r,2b,6y,2b,1r,2o,2b,4b",
     "1b,1b,1r,2o,1r,3b,2y,3b,1r,2o,1r,1b,4b",
+
     "1b,3b,2b,3o,2r,4b,2r,2o,1r,2b,2b,1b",
     "1b,1b,2b,1b,1r,4o,4r,2o,2r,2b,2b,1b",
     "2b,2b,2b,2r,7o,1r,3b,3b",
@@ -57,6 +61,7 @@
     "2b,3b,1g,2b,1g,1b,2g,6b,4o,1b,1g,1b,1o,4b,2b",
     "1b,2b,1g,1b,1g,4b,2r,3o,4b,2g,2b,4o,4b,1b",
     "1b,6b,2r,4o,2b,6g,2b,1o,3b,1o,1r,3b",
+
     "3b,2b,3b,2r,6o,3b,3g,1b,1g,2b,5o,2r,3b",
     "2b,4b,2b,1r,4o,1r,2b,1o,3b,1g,4b,2o,3b,1r,3o,1r,2b",
     "1b,1b,3b,2b,1r,3o,2r,2b,4o,1r,1b,1o,1b,1r,3o,2y,2b,1r,3o,1r,1b",
@@ -67,9 +72,9 @@
     "2b,13g,3b,1y,1o,2b,1y,5o,2y,1b,2r,2o,2y,1b,1r,2o,1b",
     "1b,8g,1b,8g,2b,1r,1b,2y,5o,2y,1b,2r,2o,2y,1b,1r,1o,1r,1b",
     "1b,1g,2b,6g,2b,1g,3b,4g,1b,1r,1b,1y,6o,2y,1b,2r,2o,1y,2b,1r,1o,1r,1b",
+
     "3b,3g,2b,3g,1b,3g,5b,1o,1r,1b,2y,5o,1y,2b,1r,3o,1y,1b,1r,2o,2b",
     "1b,2g,3b,4g,1b,5g,3b,1o,1r,2b,1y,4o,2y,1b,2r,2o,1y,2b,1r,1o,1r,1b",
-    "1b,1g,2b,3g,1b,2g,2b,6g,2b,1o,1r,1b,1y,3o,2y,2b,1r,3o,1y,1b,1r,1o,1r,2b",
     "1b,2g,1b,3g,1b,2g,2b,1g,2b,5g,1b,1o,1r,2b,3o,1y,2b,1r,3o,1y,1b,1r,2o,1r,1b",
     "1b,1g,1b,3g,2b,2g,1b,3g,2b,2g,2b,1g,1b,1o,1r,1b,3o,1b,2r,4o,1b,1r,2o,1r,2b",
     "2b,3g,1b,3g,1b,4g,1b,2g,4b,16o,1r,2b",
@@ -77,6 +82,7 @@
     "1b,1g,2b,1g,1b,3g,2b,6g,3b,1r,2o,4b,7b",
     "1b,1g,1b,3g,1b,3g,1b,3g,2b,2g,6b",
     "1b,3g,3b,2g,1b,2g,4b,1g,1b,3b",
+
     "1b,3g,1b,1b,2g,1b,2g,1b,1b,1g,1b,15b",
     "1b,2g,1b,1b,3g,1b,1b,19b",
     "1b,1g,1b,2b,2g,2b,18b",
