@@ -11,9 +11,10 @@ require "./clue_set_view"
 require "./puzzle"
 
 # puzzle = Puzzle.from_file("ladybug.20x20")
-puzzle = Puzzle.from_file("pumpkins.45x35")
+# puzzle = Puzzle.from_file("pumpkins.45x35")
+puzzle = Puzzle.from_file("hare.30x35")
 puzzle.solve
-puzzle.draw(rotate: true)
+puzzle.draw(rotate: false)
 # puzzle.draw(colour: true)
 puts puzzle.solved? ? Rainbow(" ### Solved").green : Rainbow("### Not solved").red
 puts

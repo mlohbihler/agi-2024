@@ -120,7 +120,8 @@ class Puzzle
     @board.dirtify
 
     iterate(until_clean: true) do |cs, bv|
-      bv.fill_from_matches(cs.view)
+      csv = cs.view
+      bv.fill_from_matches(csv)
       # @board.draw
       # binding.pry
     end
@@ -156,32 +157,32 @@ class Puzzle
       clues = @left_clue_sets
     end
 
-    puts "   #{col_range.map { (_1 + 1) % 10 }.join}"
-    puts "   #{'-' * col_range.size}"
+    puts "  #{col_range.map { (_1 + 1) % 10 }.join}"
+    puts "  #{'-' * col_range.size}"
 
     row_range.each do |row|
       board = col_range.map do |col|
         (is_row ? @board[row, col] : @board[col, row]) || Puzzle::FANCY_UNKNOWN
       end.join
       dirty = dirty_render(@board.dirty?(is_row, row))
-      puts "#{(row + 1) % 10}: #{board} #{dirty} #{clues[row]}"
+      puts "#{(row + 1) % 10}|#{board}#{dirty} #{clues[row]}"
     end
 
-    puts ""
-    puts "   #{col_range.map { dirty_render(@board.dirty?(!is_row, _1)) }.join}"
+    puts "  #{col_range.map { dirty_render(@board.dirty?(!is_row, _1)) }.join}"
   end
 
   def draw_with_color
-    indices = (0...@col_count).map do |i|
+    indices = (0...@top_clue_sets.length).map do |i|
       s = ((i + 1) % 100).to_s.rjust(2)
       i.even? ? s : Rainbow(s).orchid
     end.join
 
-    puts "    #{indices}"
-    puts "    #{'-' * @col_count * 2}"
+    puts "   #{indices}"
+    puts "   #{'-' * @top_clue_sets.length * 2}"
 
-    @board.each_with_index do |row, i|
-      row_str = row.map do |e|
+    (0...@left_clue_sets.length).each do |row|
+      row_str = (0...@top_clue_sets.length).map do |col|
+        e = @board[row, col]
         if e.nil?
           " #{Puzzle::FANCY_UNKNOWN}"
         elsif @colour_definitions && @colour_definitions[e]
@@ -191,12 +192,12 @@ class Puzzle
         end
       end.join
 
-      index = ((i + 1) % 100).to_s.rjust(2)
+      index = ((row + 1) % 100).to_s.rjust(2)
+      dirty = dirty_render(@board.dirty?(true, row))
 
-      puts "#{i.even? ? index : Rainbow(index).orchid}: #{row_str} #{dirty_render(@dirty_rows[i])}"
+      puts "#{row.even? ? index : Rainbow(index).orchid}|#{row_str}#{dirty}"
     end
-    puts ""
-    puts "    #{@dirty_cols.map { |i| " #{dirty_render(i)}" }.join}"
+    puts "   #{(0...@top_clue_sets.length).map { " #{dirty_render(@board.dirty?(false, _1))}" }.join}"
   end
 
   def dirty_render(value)

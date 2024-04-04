@@ -48,6 +48,28 @@ describe BoardView do
     end
   end
 
+  context "#fill_from_ranges" do
+    def call(board, clues)
+      board_view = Board.from_strings([board]).view(0, true)
+      csv = ClueSet.new(clues).view
+      board_view.fill_from_ranges(csv)
+      board_view.to_s
+    end
+
+    it "works" do
+      expect(call("......", "3b")).to(eq("......"))
+      expect(call(" ......", "4b")).to(eq(" ..bb.."))
+      expect(call("  ......", "5b")).to(eq("  .bbbb."))
+      expect(call("......", "6b")).to(eq("bbbbbb"))
+      expect(call(".......", "3b")).to(eq("......."))
+      expect(call(".......", "4b")).to(eq("...b..."))
+      expect(call("  .......   ", "5b")).to(eq("  ..bbb..   "))
+      expect(call(".......", "6b")).to(eq(".bbbbb."))
+      expect(call(".......", "7b")).to(eq("bbbbbbb"))
+      expect(call("... ....", "2b,2b")).to(eq(".b. ...."))
+    end
+  end
+
   context "#fill_from_matches" do
     def call(board, clues, bfi: false)
       board_view = Board.from_strings([board]).view(0, true)
@@ -56,16 +78,19 @@ describe BoardView do
       board_view.to_s
     end
 
-    it "doesn't actuallly change anything, but would be nice if it did" do
+    it "works" do
+      expect(call("......     ...", "4a,2a")).to(eq("..aa..     .a."))
+    end
+
+    it "doesn't actually change anything, but would be nice if it did" do
       expect(call("...b..b...b .b.b... ", "4b,1b,3b")).to(eq("...b..b...b .b.b..  "))
-      expect(call("......     ...", "4a,2a")).to(eq("......     ..."))
     end
 
     it "works using bfi" do
       expect(call(".....ggg.gg.bggg..g.bb....   ... ............", "1b,1g,1b,3g(5),1b,3g,1b,3g,2b,2g,6b", bfi: true)).
-        to(eq(    ".....gggbgg.bgggbbg.bbbbb.                   "))
+        to(eq(    ".....gggbgggbgggbbggbbbbbb                   "))
       expect(call(".....gggbgg.bgggbbg.bbbbb.                   ", "1b,1g,1b,3g(5),1b,3g,1b,3g,2b,2g,6b")).
-        to(eq(    ".....gggbgggbgggbbggbbbbb.                   "))
+        to(eq(    ".....gggbgggbgggbbggbbbbbb                   "))
       expect(call(".....gggbgggbgggbbggbbbbb.                   ", "1b,1g,1b,3g(5),1b,3g,1b,3g,2b,2g,6b")).
         to(eq(    ".....gggbgggbgggbbggbbbbbb                   "))
     end
@@ -155,28 +180,28 @@ describe BoardView do
       expect(call("..aaa.....", "3a,1a")).to(eq("..aaa ...."))
     end
   end
+
+  context "#fill_around_blanks" do
+    def call(board, clues)
+      board_view = Board.from_strings([board]).view(0, true)
+      csv = ClueSet.new(clues).view
+      board_view.fill_around_blanks(csv, board_view.to_clues, csv.match(board_view))
+      board_view.to_s
+    end
+
+    it "works" do
+      expect(call("b ..bbb.", "1b(0),4b")).to(eq("b  .bbb."))
+      expect(call("     bbbggggboooooooooooooob ..bbb.", "3b(5),4g(8),1b(12),14o(13),1b(27),4b")).
+        to(eq("     bbbggggboooooooooooooob  .bbb."))
+      expect(call("..a..   .bbb...", "4a,6b")).to(eq(".aa..   .bbbbb."))
+      expect(call("..a... ...bbb...", "2a,5b")).to(eq("..a.    ..bbb..."))
+    end
+
+    it "works for negative cases" do
+      expect(call(".....b......ggb.ggggb ......g..... b.........", "2b,3b,2g,2b,2g(12),2b,4g(16),1b(20),5b,2g,1b,3b,1b")).
+        to(eq(".....b......ggb.ggggb ......g..... b........."))
+      expect(call("..a.. ... .aaa...", "4a,1a,6a")).to(eq("..a.. ... .aaa..."))
+      expect(call("..a... ...bbb...", "4a,6b")).to(eq("..a... ...bbb..."))
+    end
+  end
 end
-
-
-# 12345678901234567890
-# --------------------
-# 1:     .... b..    bb
-# 2:     .b.b b.. bbbb
-# 3:      ...rrrrbbb bb b
-# 4:     brrrrrrrbbbbbbbb
-# 5:    brrrrrrr bbbbb b
-# 6:   brrrrrrrr  bbbbbb
-# 7:   brrrbbrrrbbbbbbbb
-# 8:  brrrrbbrrrbbb bbb
-# 9:  brrrrrrrrrbbb  rr..
-# 0:  rrrrrrrrrbrrrrrrr..
-# 1:  rrrrrrrrbrrrrrrrrbb
-# 2: bbrbbrrrbrrrrrrrrr
-# 3: b rbbrrbrrrrbbrrr...
-# 4: barrrrbrrrrrbbrrrbb
-# 5:  aarrbrrrrrrrrrrr..
-# 6:  aarbrrrbbrrrrrrb bb
-# 7:  a  rrrrbbrrrrrb
-# 8:     aarrrrrrrbb
-# 9:    aaaa brrbb
-# 0:       bbb

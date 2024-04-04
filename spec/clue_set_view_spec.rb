@@ -10,6 +10,17 @@ describe ClueSetView do
     BoardView.new(board, 0, true, 0, input.length)
   end
 
+  context "#remove_invalid_ranges" do
+    def call(board, ranges)
+      bv = Board.from_strings([board]).view(0, true)
+      ClueSet.new("").view.remove_invalid_ranges(bv, ranges)
+    end
+
+    it "works" do
+      expect(call("...b..b...b .b.b... ", [[0...9], [6...11, 13...14], [8...11, 13...18]])).to(eq([[0...9], [6...11], [13...18]]))
+    end
+  end
+
   context "#ranges" do
     def ranges(clues, board_input)
       bv = Board.from_strings([board_input]).view(0, true)
@@ -18,6 +29,10 @@ describe ClueSetView do
     end
 
     it "works" do
+      expect(ranges("3b,2b", "...b......b...")).to(eq([[1...11], [5...14]]))
+      expect(ranges("1b(0),4b", "b ..bbb.")).to(eq([[0...1], [3...8]]))
+      expect(ranges("3b(5),4g(8),1b(12),14o(13),1b(27),4b", "     bbbggggboooooooooooooob ..bbb.")).
+        to(eq([[5...8], [8...12], [12...13], [13...27], [27...28], [30...35]]))
       expect(ranges("2b,3b,2b", "    .... b..    bb  ")).to(eq([[4...8], [9...12], [16...18]]))
       expect(ranges("2a,2a,2a", "..a...a...")).to(eq([[(1...4)], [(5...7)], [(8...10)]]))
       expect(ranges("2a,2a,2a", "..a ..a...")).to(eq([[(1...3)], [(5...7)], [(8...10)]]))
@@ -39,18 +54,8 @@ describe ClueSetView do
       expect(ranges("1a,1a", " .a......")).to(eq([[(2...7)], [(4...9)]]))
       expect(ranges("4a,2a,2a,2a", "....a...a........a")).to(eq([[1...7], [7...12], [10...15], [13...18]]))
       expect(ranges("4a,2a,2a,2a", ".aaaa...a........a")).to(eq([[1...5], [7...12], [10...15], [13...18]]))
-      expect(ranges("2b,2r,1b,4a", "..........rb..aa....")).to(eq([
-        [0...9],
-        [2...11],
-        [4...10, 11...14],
-        [5...10, 12...18],
-      ]))
-      expect(ranges("1b,7r,5b,1b", ".....rrrrrr..b..b...")).to(eq([
-        [0...5],
-        [4...12],
-        [12...18],
-        [18...20],
-      ]))
+      expect(ranges("2b,2r,1b,4a", "..........rb..aa....")).to(eq([[0...9], [2...11], [11...14], [12...18]]))
+      expect(ranges("1b,7r,5b,1b", ".....rrrrrr..b..b...")).to(eq([[0...5], [4...12], [12...18], [18...20]]))
       expect(ranges("3a,3b", ".....   ...")).to(eq([[0...5], [8...11]]))
       expect(ranges("3a,2a", ".....   ...")).to(eq([[0...5], [8...11]]))
       expect(ranges("3a,2a", ".....   ......")).to(eq([[0...5, 8...11], [8...14]]))
@@ -69,13 +74,13 @@ describe ClueSetView do
       expect(ranges("1b,1g,1b,3g(5),1b,3g,1b,3g,2b,2g,6b", ".....ggg.gg.bggg..g.bb....   ... ............")).to(eq([
         [0...3],
         [1...4],
-        [2...5, 8...9, 12...13],
-        [5...12, 13...17],
-        [8...9, 12...13, 16...18],
-        [9...12, 13...20, 22...25],
-        [12...13, 16...18, 23...26],
-        [13...20, 22...26, 29...32],
-        [16...18, 20...26, 29...32, 33...37],
+        [2...5],
+        [5...8],
+        [8...9],
+        [9...12],
+        [12...13],
+        [13...20],
+        [16...18, 20...26],
         [18...20, 22...26, 29...32, 33...39],
         [20...26, 33...45],
       ]))
@@ -129,11 +134,13 @@ describe ClueSetView do
     def matches(clues, board_input, expected = nil)
       bv = Board.from_strings([board_input]).view(0, true)
       csv = ClueSet.new(clues).view
-      csv.match_bfi(bv)
       expect(csv.match(bv)).to eq(expected || csv.match_bfi(bv))
     end
 
     it "works" do
+      matches("1b(0),4b", "b ..bbb.")
+      matches("3b(5),4g(8),1b(12),14o(13),1b(27),4b", "     bbbggggboooooooooooooob ..bbb.")
+
       matches("3a,2a,5b,1b,3a", "..................")
       matches("2a,2a,2a", "..a...a...")
       matches("3a,2a,5b,1b,3a", "....aa....bbb.b....")
@@ -145,7 +152,8 @@ describe ClueSetView do
       matches("2b,2r,1b,4a", "..........rb..aa....")
       matches("1b,7r,5b,1b", ".....rrrrrr..b..b...")
       matches("3b", "          .b..      ")
-      matches("4b,1b,3b", "...b..b...b .b.b... ", { 0 => 0, 5 => 2 })
+      matches("4b,1b,3b", "...b..b...b .b.b... ", { 0 => 0, 2 => 1, 4 => 2, 5 => 2 })
+      matches("1b,1g,1b,3g(5),1b,3g,1b,3g,2b,2g,6b", ".....ggg.gg.bggg..g.bb....   ... ............", { 0 => 3, 1 => 5, 2 => 6, 3 => 7 })
     end
 
     it "matches clues at boundaries" do
@@ -244,6 +252,7 @@ describe ClueSetView do
     end
 
     it "works for positive cases" do
+      expect(solutions("4a,1a,3a", "..a..a...a....a.a..")).to(eq([[2, 9, 14]]))
       expect(solutions("1a", "..")).to(eq([[0], [1]]))
       expect(solutions("1a,2a", ".....")).to(eq([[0, 2], [0, 3], [1, 3]]))
       expect(solutions("1a,2b", "....")).to(eq([[0, 1], [0, 2], [1, 2]]))

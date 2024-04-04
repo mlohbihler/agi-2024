@@ -46,6 +46,10 @@ class BoardView
     end
   end
 
+  def fill(from, to, colour)
+    (from...to).each { self[_1] = colour }
+  end
+
   def in_bounds?(index)
     index >= 0 && index < length
   end
@@ -110,6 +114,18 @@ class BoardView
     self.class.new(@board, @index, @is_row, @from + from, @from + to)
   end
 
+  def fill_from_ranges(csv)
+    csv.ranges(self).each_with_index do |ranges, index|
+      next unless ranges.one?
+
+      clue = csv[index]
+      range = ranges.first
+      next unless range.size < clue.count * 2
+
+      fill(range.last - clue.count, range.first + clue.count, clue.colour)
+    end
+  end
+
   def fill_from_matches(csv, bfi: false)
     board_clue_set = to_clues
 
@@ -121,6 +137,9 @@ class BoardView
     fill_in_between_matches(csv, board_clue_set, matches)
     fill_from_edges(csv, board_clue_set, matches)
     cap_solved_clues(csv, board_clue_set, matches)
+    fill_around_blanks(csv, board_clue_set, matches)
+
+    fill_from_ranges(csv)
   end
 
   # TODO: Could be useful to recursively call this method on the spaces between matches.
@@ -226,6 +245,34 @@ class BoardView
       if clue_index < csv.length - 1 && csv[clue_index + 1].colour == board_clue.colour
         self[board_clue.to] = Puzzle::BLANK
       end
+    end
+  end
+
+  # Fills cells where spaces are between consecutive clues
+  def fill_around_blanks(csv, board_clue_set, matches)
+    board_clue_set.each_with_index do |board_clue, index|
+      next unless board_clue.colour == Puzzle::BLANK
+      next unless matches[index - 1]
+      next unless matches[index + 1]
+      next unless matches[index - 1] == matches[index + 1] - 1 # Ensure consecutive clues.
+
+      # Check the clue on the left.
+      left = board_clue_set[index - 1]
+      clue = csv[matches[index - 1]]
+
+      # Extend the left match
+      fill(board_clue.solution - clue.count, left.solution, left.colour)
+      # Extend the spaces leftward
+      fill(left.solution + clue.count, board_clue.solution, Puzzle::BLANK)
+
+      # Check the clue on the right.
+      right = board_clue_set[index + 1]
+      clue = csv[matches[index + 1]]
+
+      # Extend the right match
+      fill(right.solution, board_clue.to + clue.count, right.colour)
+      # Extend the spaces rightward
+      fill(board_clue.to, right.to - clue.count, Puzzle::BLANK)
     end
   end
 end

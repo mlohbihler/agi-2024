@@ -84,9 +84,13 @@ class ClueSetView
     offset = padding.first
     last_clue_colour = nil
 
-    ranges = map do |clue|
+    all_ranges = map do |clue|
       offset += 1 if clue.colour == last_clue_colour
-      range = (offset...offset + clue.count + diff)
+      range = if clue.solved?
+        (clue.solution...clue.to)
+      else
+        (offset...offset + clue.count + diff)
+      end
       offset += clue.count
       last_clue_colour = clue.colour
       range
@@ -132,8 +136,8 @@ class ClueSetView
       end.compact
     end
 
-    limit_range_overlap(ranges)
-    ranges
+    all_ranges = limit_range_overlap(all_ranges)
+    remove_invalid_ranges(board_view, all_ranges)
   end
 
   def limit_range_overlap(ranges)
@@ -147,7 +151,6 @@ class ClueSetView
       spacer = left_clue.colour == right_clue.colour ? 1 : 0
 
       min = left_ranges.first.first + spacer + left_clue.count
-      # binding.pry
       while right_ranges.first.first < min
         range = (min...right_ranges.first.last)
         if range.size < right_clue.count
@@ -167,7 +170,6 @@ class ClueSetView
       spacer = left_clue.colour == right_clue.colour ? 1 : 0
 
       max = right_ranges.last.last - spacer - right_clue.count
-      # binding.pry
       while left_ranges.last.last > max
         range = (left_ranges.last.first...max)
         if range.size < left_clue.count
@@ -177,6 +179,69 @@ class ClueSetView
         end
       end
     end
+
+    ranges
+  end
+
+  def remove_invalid_ranges(board_view, all_ranges)
+    # TODO: need to be careful with this method as it can have a large runtime complexity
+
+    # Enumerate the combinations of ranges and eliminate those where:
+    # - it leaves orphaned solutions
+    # - it has invalid range overlap
+
+    # Convert the board view to ranges of colour cells.
+    board_ranges = []
+    last_cell_index = nil
+    board_view.each_with_index do |cell, index|
+      if cell.nil? || cell == Puzzle::BLANK
+        if !last_cell_index.nil?
+          board_ranges << (last_cell_index...index)
+          last_cell_index = nil
+        end
+      elsif last_cell_index.nil?
+        last_cell_index = index
+      end
+    end
+    board_ranges << (last_cell_index...board_view.length) if last_cell_index
+
+    result = []
+    all_ranges[0].product(*all_ranges[1..]) do |combo|
+      # Ensure that any overlap is valid
+      next unless (0...combo.length - 1).all? do |combo_index|
+        left = combo[combo_index]
+        right = combo[combo_index + 1]
+        left.first < right.last
+      end
+
+      # Coalesce combo elements that overlap or abut.
+      coalesced_combo = []
+      sorted_combo = combo.sort_by(&:first)
+      last_range = sorted_combo.first
+      sorted_combo[1..].each do |range|
+        next if last_range.cover?(range)
+
+        if range.cover?(last_range)
+          last_range = range
+        elsif range.first <= last_range.last
+          last_range = (last_range.first...range.last)
+        else
+          coalesced_combo << last_range
+          last_range = range
+        end
+      end
+      coalesced_combo << last_range
+
+      # Ensure the combo doesn't leave any orphans
+      next unless board_ranges.all? do |board_range|
+        coalesced_combo.any? { _1.cover?(board_range) }
+      end
+
+      result << combo
+    end
+
+    # Reassemble the combos into an array of arrays
+    result.first.zip(*result[1..]).map(&:uniq)
   end
 
   def match(board_view)
@@ -411,5 +476,18 @@ class ClueSetView
     # puts "iterations: #{iterations}"
 
     solutions
+    # Remove matches that have orphaned solutions.
+    # solutions.select do |solution|
+    #   (0...board_view.length).all? do |board_index|
+    #     colour = board_view[board_index]
+    #     next true if colour.nil? || colour == Puzzle::BLANK
+
+    #     (0...solution.length).any? do |solution_index|
+    #       location = solution[solution_index]
+    #       clue = self[solution_index]
+    #       board_index >= location && board_index < location + clue.count
+    #     end
+    #   end
+    # end
   end
 end
