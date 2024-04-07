@@ -315,7 +315,7 @@ class ClueSetView
 
       # Remove array elements where their values are less than previous ints
       min = nil
-      matches.each do |_bi, ci|
+      matches.each do |(_bi, ci)|
         if ci.is_a?(Array)
           next if min.nil?
 
@@ -332,7 +332,7 @@ class ClueSetView
 
       # Remove array elements where their values are greater than subsequent ints
       max = nil
-      matches.reverse_each do |_bi, ci|
+      matches.reverse_each do |(_bi, ci)|
         if ci.is_a?(Array)
           next if max.nil?
 
