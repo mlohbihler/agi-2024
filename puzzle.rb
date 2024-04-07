@@ -30,12 +30,12 @@ class Puzzle
 
     # The sums of any rows are not greater than the number of cols and vice versa
     @top_clue_sets.each.with_index do |cs, i|
-      len = ClueSetView.new(cs, from: 0, to: cs.length).sum
+      len = ClueSetView.new(cs).sum
       max = @board.row_count
       raise "Top clue set #{i + 1} is too long: #{len} vs #{max}" if len > max
     end
     @left_clue_sets.each.with_index do |cs, i|
-      len = ClueSetView.new(cs, from: 0, to: cs.length).sum
+      len = ClueSetView.new(cs).sum
       max = @board.col_count
       raise "Left clue set #{i + 1} is too long: #{len} vs #{max}" if len > max
     end

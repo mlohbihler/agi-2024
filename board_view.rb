@@ -8,7 +8,7 @@ require "pry-nav"
 class BoardView
   include Enumerable
 
-  attr_reader :index, :is_row
+  attr_reader :index, :is_row, :from
 
   def initialize(board, index, is_row, from, to)
     @board = board
@@ -105,7 +105,7 @@ class BoardView
       end
     end
 
-    result << Clue.new(count, previous, @to - count) if !previous.nil?
+    result << Clue.new(count, previous, length - count) if !previous.nil?
 
     ClueSet.new(result)
   end
@@ -132,7 +132,7 @@ class BoardView
     # TODO: there is potential information in the ranges, especially when there are spaces in the
     # board. Get the ranges separately here and fill spaces using that information.
 
-    matches = bfi ? csv.match_bfi(self) : csv.match(self)
+    matches = bfi ? csv.match_bfi(self) : csv.match_v2(self)
 
     fill_in_between_matches(csv, board_clue_set, matches)
     fill_from_edges(csv, board_clue_set, matches)
@@ -150,7 +150,7 @@ class BoardView
     board_clue_index, clue_index = matches.first
     board_clue = board_clue_set[board_clue_index]
     spacer = csv.spacer(clue_index, before: true)
-    csv.view(0, clue_index).fill(view(0, board_clue.solution - spacer).trim)
+    csv.view(0, 0, clue_index).fill(view(0, board_clue.solution - spacer).trim)
 
     # Fill between matches
     matches.each_cons(2) do |(left_board_i, left_clue_i), (right_board_i, right_clue_i)|
@@ -162,7 +162,7 @@ class BoardView
         (left_board_clue.to...right_board_clue.solution).
           each { |i| self[i] = left_board_clue.colour }
       elsif right_clue_i - left_clue_i == 1
-        # # The clues are adjacent, so extrapolate from them.
+        # The clues are adjacent, so extrapolate from them.
         right_clue = csv[right_clue_i]
         left_clue = csv[left_clue_i]
 
@@ -183,7 +183,7 @@ class BoardView
       else
         left_spacer = csv.spacer(left_clue_i, before: false)
         right_spacer = csv.spacer(right_clue_i, before: true)
-        csv.view(left_clue_i + 1, right_clue_i).fill(
+        csv.view(left_board_clue.to, left_clue_i + 1, right_clue_i).fill(
           view(left_board_clue.to + left_spacer, right_board_clue.solution - right_spacer).trim
         )
       end
@@ -194,7 +194,7 @@ class BoardView
     clue_index = matches[board_clue_index]
     board_clue = board_clue_set[board_clue_index]
     spacer = csv.spacer(clue_index, before: false)
-    csv.view(clue_index + 1).fill(view(board_clue.to + spacer).trim)
+    csv.view(board_clue.to, clue_index + 1).fill(view(board_clue.to + spacer).trim)
   end
 
   def fill_from_edges(csv, board_clue_set, matches)

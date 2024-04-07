@@ -37,8 +37,8 @@ class ClueSet
     "[#{@clues.join(',')}]"
   end
 
-  def view(from = 0, to = length)
-    ClueSetView.new(self, from: from, to: to)
+  def view(board_offset = 0, from = 0, to = length)
+    ClueSetView.new(self, board_offset, from: from, to: to)
   end
 
   def solved?

@@ -1,10 +1,12 @@
 require "./puzzle"
+require "./clue_view"
 
 class ClueSetView
   include Enumerable
 
-  def initialize(clue_set, from: 0, to: clue_set.length)
+  def initialize(clue_set, board_offset = 0, from: 0, to: clue_set.length)
     @clue_set = clue_set
+    @board_offset = board_offset
     @from = from
     @to = to
   end
@@ -22,15 +24,16 @@ class ClueSetView
   def [](index)
     raise "Out of bounds #{index} in [#{@from}, #{@to})" unless in_bounds?(index)
 
-    @clue_set[@from + index]
+    c = @clue_set[@from + index]
+    @board_offset == 0 ? c : ClueView.new(c, @board_offset)
   end
 
   def in_bounds?(index)
     index >= 0 && index < length
   end
 
-  def view(from, to = length)
-    self.class.new(@clue_set, from: @from + from, to: @from + to)
+  def view(board_offset, from, to = length)
+    self.class.new(@clue_set, @board_offset + board_offset, from: @from + from, to: @from + to)
   end
 
   def spacer(index, before:)
@@ -75,16 +78,22 @@ class ClueSetView
     sum
   end
 
+  def ranges(bv)
+    ranges = create_ranges(bv)
+    ranges = limit_range_overlap(ranges)
+    remove_invalid_ranges(bv, ranges)
+  end
+
   # TODO: need a way to better accomodate for spaces in determining ranges. Like eliminating clue
   # ranges when they can't fit together inside a view section.
-  def ranges(board_view)
+  def create_ranges(board_view)
     diff = board_view.length - sum
     padding = board_view.padding
     diff -= padding.first + board_view.length - padding.last
     offset = padding.first
     last_clue_colour = nil
 
-    all_ranges = map do |clue|
+    map do |clue|
       offset += 1 if clue.colour == last_clue_colour
       range = if clue.solved?
         (clue.solution...clue.to)
@@ -135,9 +144,6 @@ class ClueSetView
         range if range.size >= clue.count
       end.compact
     end
-
-    all_ranges = limit_range_overlap(all_ranges)
-    remove_invalid_ranges(board_view, all_ranges)
   end
 
   def limit_range_overlap(ranges)
@@ -184,7 +190,9 @@ class ClueSetView
   end
 
   def remove_invalid_ranges(board_view, all_ranges)
-    # TODO: need to be careful with this method as it can have a large runtime complexity
+    # Need to be careful with this method as it can have a large runtime complexity
+    combo_count = all_ranges.map(&:length).reduce(&:*)
+    return all_ranges if combo_count > 1000
 
     # Enumerate the combinations of ranges and eliminate those where:
     # - it leaves orphaned solutions
@@ -246,8 +254,15 @@ class ClueSetView
 
   def match(board_view)
     ranges = ranges(board_view)
-    matches = {}
     bvcs = board_view.to_clues
+
+    matches = match_from_ranges(board_view, ranges, bvcs)
+
+    mark_solved_clues(matches, bvcs)
+  end
+
+  def match_from_ranges(board_view, ranges, bvcs)
+    matches = {}
     bvcs.each.each_with_index do |board_clue, board_clue_index|
       next if board_clue.colour == Puzzle::BLANK
 
@@ -258,6 +273,7 @@ class ClueSetView
       ranges.each_with_index do |clue_ranges, clue_index|
         clue = self[clue_index]
         next if clue.colour != board_clue.colour
+        next if clue.count < board_clue.count
 
         clue_ranges.each do |range|
           next unless self.class.contains?(range.first, range.last, board_clue_from, board_clue_to)
@@ -278,7 +294,7 @@ class ClueSetView
       end
     end
 
-    mark_solved_clues(self.class.resolve_multiple_matches(matches), bvcs)
+    self.class.resolve_multiple_matches(matches)
   end
 
   def self.resolve_multiple_matches(matches)
@@ -343,6 +359,100 @@ class ClueSetView
 
       clue.solve(board_clue.solution)
     end
+  end
+
+  def match_v2(bv)
+    bvcs = bv.to_clues
+    return {} if bvcs.empty?
+
+    # Start with the already known matches
+    matches = match_clues_to_board_clues(bvcs)
+
+    loop do
+      last_match_count = matches.length
+
+      if matches.empty?
+        matches = match(bv)
+      else
+        matches_arr = matches.to_a
+
+        # Left
+        if matches_arr[0][1] > 0
+          solution_index, clue_index = matches_arr[0]
+          matches = sub_matches(bv, 0, clue_index, bvcs, nil, solution_index, matches)
+        end
+
+        # In betweens
+        matches_arr.each_cons(2) do |(left_board_i, left_clue_i), (right_board_i, right_clue_i)|
+          next if left_clue_i + 1 >= right_clue_i
+
+          matches = sub_matches(
+            bv, left_clue_i + 1, right_clue_i, bvcs, left_board_i, right_board_i, matches
+          )
+        end
+
+        # Right
+        if matches_arr[-1][1] < length - 1
+          solution_index, clue_index = matches_arr[-1]
+          matches = sub_matches(bv, clue_index + 1, length, bvcs, solution_index, nil, matches)
+        end
+      end
+
+      break if matches.length == last_match_count
+    end
+
+    matches
+  end
+
+  def sub_matches(bv, clue_from, clue_to, bvcs, board_clue_from, board_clue_to, matches)
+    # Check if the board clue beside the boundaries could fit with that solution inside the
+    # matching clue. If so, abort.
+    if clue_from > 0 && board_clue_from + 1 < bvcs.length
+      clue = self[clue_from - 1]
+      board_clue = bvcs[board_clue_from]
+      next_board_clue = bvcs[board_clue_from + 1]
+      if next_board_clue.colour == clue.colour
+        return matches if next_board_clue.to <= board_clue.solution + clue.count
+      end
+    end
+    if clue_to < length # && board_clue_to > 0
+      clue = self[clue_to]
+      board_clue = bvcs[board_clue_to]
+      previous_board_clue = bvcs[board_clue_to - 1]
+      if previous_board_clue.colour == clue.colour
+        return matches if previous_board_clue.solution >= board_clue.to - clue.count
+      end
+    end
+
+    # Create a sub-view of the board. We want to remove any padding, but since spaces are
+    # solution clues, if we remove padding from the left side we need to increment the solution
+    # index.
+    board_from = board_clue_from.nil? ? 0 : bvcs[board_clue_from].to
+    board_to = board_clue_to.nil? ? bv.length : bvcs[board_clue_to].solution
+    sub_bv = bv.view(board_from, board_to)
+    padding = sub_bv.padding
+    board_clue_from ||= -1
+    board_clue_from += 1 if padding[0] > 0
+    new_matches = view(board_from + padding[0], clue_from, clue_to).match_v2(sub_bv.view(*padding))
+
+    # Matches are in the indexes of their sub-views. We need to translate them
+    # back to the current view.
+    new_matches = new_matches.to_h { |s,c| [s + board_clue_from + 1, c + clue_from] }
+
+    # The ordering of the matches is important.
+    matches.merge(new_matches).to_a.sort_by(&:first).to_h
+  end
+
+  def match_clues_to_board_clues(bvcs)
+    matches = {}
+    bvcs_index = 0
+    each_with_index do |clue, index|
+      next unless clue.solved?
+
+      bvcs_index += 1 while bvcs[bvcs_index] && bvcs[bvcs_index].solution < clue.solution
+      matches[bvcs_index] = index if bvcs[bvcs_index] && bvcs[bvcs_index].solution == clue.solution
+    end
+    matches
   end
 
   def fill(board_view)
