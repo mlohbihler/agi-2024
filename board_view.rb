@@ -94,14 +94,14 @@ class BoardView
     previous = nil
     count = 0
     each_with_index do |current, i|
-      if current != previous
+      if current == previous
+        count += 1
+      else
         if !previous.nil?
           result << Clue.new(count, previous, i - count)
         end
         count = 1
         previous = current
-      else
-        count += 1
       end
     end
 

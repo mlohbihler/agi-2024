@@ -4,7 +4,7 @@ class Puzzle
   FANCY_UNKNOWN = "\u00b7".freeze
 
   def self.from_file(name)
-    data = JSON.parse(File.open("puzzles/#{name}.json").read)
+    data = JSON.parse(File.read("puzzles/#{name}.json"))
     new(*data[0..2])
   end
 

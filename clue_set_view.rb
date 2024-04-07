@@ -261,9 +261,9 @@ class ClueSetView
     mark_solved_clues(matches, bvcs)
   end
 
-  def match_from_ranges(board_view, ranges, bvcs)
+  def match_from_ranges(_board_view, ranges, bvcs)
     matches = {}
-    bvcs.each.each_with_index do |board_clue, board_clue_index|
+    bvcs.each_with_index do |board_clue, board_clue_index|
       next if board_clue.colour == Puzzle::BLANK
 
       board_clue_from = board_clue.solution
@@ -411,16 +411,18 @@ class ClueSetView
       clue = self[clue_from - 1]
       board_clue = bvcs[board_clue_from]
       next_board_clue = bvcs[board_clue_from + 1]
-      if next_board_clue.colour == clue.colour
-        return matches if next_board_clue.to <= board_clue.solution + clue.count
+      if next_board_clue.colour == clue.colour &&
+          (next_board_clue.to <= board_clue.solution + clue.count)
+        return matches
       end
     end
     if clue_to < length # && board_clue_to > 0
       clue = self[clue_to]
       board_clue = bvcs[board_clue_to]
       previous_board_clue = bvcs[board_clue_to - 1]
-      if previous_board_clue.colour == clue.colour
-        return matches if previous_board_clue.solution >= board_clue.to - clue.count
+      if previous_board_clue.colour == clue.colour &&
+          (previous_board_clue.solution >= board_clue.to - clue.count)
+        return matches
       end
     end
 
@@ -437,7 +439,7 @@ class ClueSetView
 
     # Matches are in the indexes of their sub-views. We need to translate them
     # back to the current view.
-    new_matches = new_matches.to_h { |s,c| [s + board_clue_from + 1, c + clue_from] }
+    new_matches = new_matches.to_h { |s, c| [s + board_clue_from + 1, c + clue_from] }
 
     # The ordering of the matches is important.
     matches.merge(new_matches).to_a.sort_by(&:first).to_h

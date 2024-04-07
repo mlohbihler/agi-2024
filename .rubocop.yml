@@ -21,7 +21,7 @@ Layout/BlockAlignment:
 
 Style/MethodCallWithArgsParentheses:
   Enabled: true
-  IgnoredMethods: [puts, raise, render, require]
+  AllowedMethods: [puts, raise, render, require]
   Exclude:
     - !ruby/regexp /_spec\.rb$/
     - spec/support/matchers/*
@@ -90,7 +90,7 @@ Layout/LineLength:
   Exclude:
     - spec/**/*_spec.rb
     - db/**/*
-  IgnoredPatterns:
+  AllowedPatterns:
     - ^#!
     - \"$ # Don't enforce on long strings.
     - \",$ # Don't enforce on long strings in hashes.
@@ -171,7 +171,6 @@ Metrics/BlockLength:
 Metrics/BlockNesting:
   Max: 4
 
-
 # Trailing dot makes it so code can be copied and pasted into the Rails console and run
 # interactively easily.
 Layout/DotPosition:
@@ -240,7 +239,7 @@ Style/EmptyMethod:
 
 Style/OptionalBooleanParameter:
   Exclude:
-  - app/jobs/* # We can't use named params for jobs.
+    - app/jobs/* # We can't use named params for jobs.
 
 # Legacy method names like `has_sp_releases?` would be better named `sp_releases?` but we treat
 # this as a warning instead of an error.
