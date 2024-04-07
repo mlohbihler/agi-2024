@@ -132,7 +132,7 @@ class BoardView
     # TODO: there is potential information in the ranges, especially when there are spaces in the
     # board. Get the ranges separately here and fill spaces using that information.
 
-    matches = bfi ? csv.match_bfi(self) : csv.match_v2(self)
+    matches = bfi ? csv.match_bfi(self) : csv.match_recursive(self)
 
     fill_in_between_matches(csv, board_clue_set, matches)
     fill_from_edges(csv, board_clue_set, matches)
@@ -201,7 +201,7 @@ class BoardView
     return if matches.empty?
 
     bcsv = board_clue_set.view
-    matches.each_with_index do |(board_clue_index, clue_index)|
+    matches.each do |(board_clue_index, clue_index)|
       board_clue = board_clue_set[board_clue_index]
       clue = csv[clue_index]
 

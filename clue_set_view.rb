@@ -82,6 +82,8 @@ class ClueSetView
     ranges = create_ranges(bv)
     ranges = limit_range_overlap(ranges)
     remove_invalid_ranges(bv, ranges)
+
+    # binding.pry
   end
 
   # TODO: need a way to better accomodate for spaces in determining ranges. Like eliminating clue
@@ -361,7 +363,7 @@ class ClueSetView
     end
   end
 
-  def match_v2(bv)
+  def match_recursive(bv)
     bvcs = bv.to_clues
     return {} if bvcs.empty?
 
@@ -435,7 +437,8 @@ class ClueSetView
     padding = sub_bv.padding
     board_clue_from ||= -1
     board_clue_from += 1 if padding[0] > 0
-    new_matches = view(board_from + padding[0], clue_from, clue_to).match_v2(sub_bv.view(*padding))
+    new_matches = view(board_from + padding[0], clue_from, clue_to).
+      match_recursive(sub_bv.view(*padding))
 
     # Matches are in the indexes of their sub-views. We need to translate them
     # back to the current view.
