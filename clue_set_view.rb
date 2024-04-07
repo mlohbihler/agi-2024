@@ -80,10 +80,17 @@ class ClueSetView
 
   def ranges(bv)
     ranges = create_ranges(bv)
-    ranges = limit_range_overlap(ranges)
-    remove_invalid_ranges(bv, ranges)
 
-    # binding.pry
+    loop do
+      og_ranges = ranges.dup
+
+      ranges = limit_range_overlap(ranges)
+      ranges = remove_invalid_ranges(bv, ranges)
+
+      break if og_ranges == ranges
+    end
+
+    ranges
   end
 
   # TODO: need a way to better accomodate for spaces in determining ranges. Like eliminating clue
@@ -217,11 +224,14 @@ class ClueSetView
 
     result = []
     all_ranges[0].product(*all_ranges[1..]) do |combo|
-      # Ensure that any overlap is valid
+      # Ensure that any overlap is valid. The end of the next range cannot be before the max
+      # of the beginnings of all previous ranges.
+      min = combo[0].first
       next unless (0...combo.length - 1).all? do |combo_index|
         left = combo[combo_index]
         right = combo[combo_index + 1]
-        left.first < right.last
+        min = [min, left.first].max
+        min < right.last
       end
 
       # Coalesce combo elements that overlap or abut.
@@ -258,12 +268,12 @@ class ClueSetView
     ranges = ranges(board_view)
     bvcs = board_view.to_clues
 
-    matches = match_from_ranges(board_view, ranges, bvcs)
+    matches = match_from_ranges(ranges, bvcs)
 
     mark_solved_clues(matches, bvcs)
   end
 
-  def match_from_ranges(_board_view, ranges, bvcs)
+  def match_from_ranges(ranges, bvcs)
     matches = {}
     bvcs.each_with_index do |board_clue, board_clue_index|
       next if board_clue.colour == Puzzle::BLANK

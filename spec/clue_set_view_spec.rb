@@ -16,6 +16,12 @@ describe ClueSetView do
     end
 
     it "works" do
+      expect(
+        call(
+          "............b.......a...b..bb..b.............",
+          [[0...20, 21...38], [1...12, 13...24, 25...27, 29...31, 32...39], [2...20, 21...40], [4...20, 21...43], [7...20, 21...45]]
+        )
+      ).to(eq([[0...20], [13...24], [2...20, 21...40], [4...20, 21...43], [21...45]]))
       expect(call("...b..b...b .b.b... ", [[0...9], [6...11, 13...14], [8...11, 13...18]])).
         to(eq([[0...9], [6...11], [13...18]]))
     end
@@ -29,6 +35,7 @@ describe ClueSetView do
     end
 
     it "works" do
+      # But, does it? Really?
     end
   end
 
@@ -40,6 +47,13 @@ describe ClueSetView do
     end
 
     it "works" do
+      expect(ranges("1b,5g,4g,2g,1s", "..............gg..gg....gg....")).to(
+        eq([[0...12], [1...17], [7...26], [14...29], [16...18, 20...24, 26...30]])
+      )
+      expect(ranges("1b,1a,1b,2b,1b", "............b.......a...b..bb..b.............")).to(
+        eq([[0...20], [13...24], [14...20, 21...40], [16...20, 21...43], [21...45]])
+      )
+
       expect(ranges("1g,6g,3g,4g,1s,1b,1s,1s", ".....g..........gg. .gggs..........")).to(
         eq(
           [
@@ -50,7 +64,7 @@ describe ClueSetView do
             [24...31],
             [25...32],
             [26...33],
-            [27...35],
+            [28...35],
           ]
         )
       )
@@ -167,6 +181,25 @@ describe ClueSetView do
     end
   end
 
+  context "#match_from_ranges" do
+    # def match_from_ranges(ranges, bvcs)
+    def call(clues, board_input, ranges)
+      bv = Board.from_strings([board_input]).view(0, true)
+      csv = ClueSet.new(clues).view
+      csv.match_from_ranges(ranges, bv.to_clues)
+    end
+
+    it "works" do
+      expect(
+        call(
+          "1b,5g,4g,2g,1s",
+          "..............gg..gg....gg....",
+          [[0...12], [1...17], [7...26], [14...29], [16...18, 20...24, 26...30]]
+        )
+      ).to(eq({}))
+    end
+  end
+
   context "#match" do
     def call(clues, board_input, expected = nil)
       bv = Board.from_strings([board_input]).view(0, true)
@@ -232,6 +265,8 @@ describe ClueSetView do
     end
 
     it "works" do
+      call("1b,5g,4g,2g,1s", "..............gg..gg....gg....", "", {0=>1, 1=>2, 2=>3})
+
       call("1b,3r,2b,3r(8),8b", " ..rrrbbrrr.bbbbbbb.", "1b,3r(3),2b(6),3r(8),8b")
       call("1b,4r,3b,2b,1b", "........r...........", "1b,4r,3b,2b,1b")
       call("2b,3b,2b", "....................", "2b,3b,2b")
