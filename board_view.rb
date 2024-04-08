@@ -46,6 +46,29 @@ class BoardView
     end
   end
 
+  def limit_colours(index, limits)
+    if @is_row
+      @board.limit_colours(@index, @from + index, limits)
+    else
+      @board.limit_colours(@from + index, @index, limits)
+    end
+  end
+
+  def colour_limits(index)
+    raise "Out of bounds #{index} in [#{@from}, #{@to})" unless in_bounds?(index)
+
+    if @is_row
+      @board.colour_limits(@index, @from + index)
+    else
+      @board.colour_limits(@from + index, @index)
+    end
+  end
+
+  def colour_limits_include?(index, colour)
+    limits = colour_limits(index)
+    limits.nil? || limits.include?(colour)
+  end
+
   def fill(from, to, colour)
     (from...to).each { self[_1] = colour }
   end
@@ -138,6 +161,7 @@ class BoardView
     fill_from_edges(csv, board_clue_set, matches)
     cap_solved_clues(csv, board_clue_set, matches)
     fill_around_blanks(csv, board_clue_set, matches)
+    limit_colours_using_matches(csv, matches)
 
     fill_from_ranges(csv)
   end
@@ -273,6 +297,58 @@ class BoardView
       fill(right.solution, board_clue.to + clue.count, right.colour)
       # Extend the spaces rightward
       fill(board_clue.to, right.to - clue.count, Puzzle::BLANK)
+    end
+  end
+
+  # Uses matches to know what limits there are in the colours extending from them.
+  def limit_colours_using_matches(csv, matches)
+    # Find matches where there are unmatched clues on either side.
+    matches.each_value do |clue_index|
+      clue = csv[clue_index]
+      next unless clue.solved?
+
+      if clue_index > 0
+        left_clue = csv[clue_index - 1]
+        unless left_clue.solved?
+          start = clue.solution - (clue.colour == left_clue.colour ? 1 : 0) - 1
+          # Find the starting index of the first place where the left clue could fit.
+          remaining = left_clue.count
+          loop do
+            if self[start] == Puzzle::BLANK
+              remaining = left_clue.count
+            elsif !self[start].nil? && self[start] != left_clue.colour
+              raise "Unable to find a place to fit the left clue"
+            else
+              remaining -= 1
+            end
+            break if remaining == 0
+
+            start -= 1
+          end
+          (start...start + left_clue.count).each { limit_colours(_1, left_clue.colour) }
+        end
+      end
+
+      next unless clue_index + 1 < csv.length
+
+      right_clue = csv[clue_index + 1]
+      next if right_clue.solved?
+
+      finish = clue.to + (clue.colour == right_clue.colour ? 1 : 0)
+      # Find the ending index of the first place where the right clue could fit.
+      remaining = right_clue.count
+      loop do
+        if self[finish] == Puzzle::BLANK
+          remaining = right_clue.count
+        elsif !self[finish].nil? && self[finish] != right_clue.colour
+          raise "Unable to find a place to fit the right clue"
+        else
+          remaining -= 1
+        end
+        finish += 1
+        break if remaining == 0
+      end
+      (finish - right_clue.count...finish).each { limit_colours(_1, right_clue.colour) }
     end
   end
 end

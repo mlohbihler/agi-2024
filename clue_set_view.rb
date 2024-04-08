@@ -86,6 +86,8 @@ class ClueSetView
 
       ranges = limit_range_overlap(ranges)
       ranges = remove_invalid_ranges(bv, ranges)
+      # This doesn't work because the sub-view being worked on might not include all of the clues.
+      # limit_colours_using_ranges(bv, ranges)
 
       break if og_ranges == ranges
     end
@@ -118,7 +120,8 @@ class ClueSetView
       clue_ranges = []
       remainder = range
       range.each do |location|
-        next if board_view[location].nil? || board_view[location] == clue.colour
+        next if (board_view[location].nil? || board_view[location] == clue.colour) &&
+          board_view.colour_limits_include?(location, clue.colour)
 
         left = (remainder.first...location)
         clue_ranges << left if left.size >= clue.count
@@ -235,22 +238,7 @@ class ClueSetView
       end
 
       # Coalesce combo elements that overlap or abut.
-      coalesced_combo = []
-      sorted_combo = combo.sort_by(&:first)
-      last_range = sorted_combo.first
-      sorted_combo[1..].each do |range|
-        next if last_range.cover?(range)
-
-        if range.cover?(last_range)
-          last_range = range
-        elsif range.first <= last_range.last
-          last_range = (last_range.first...range.last)
-        else
-          coalesced_combo << last_range
-          last_range = range
-        end
-      end
-      coalesced_combo << last_range
+      coalesced_combo = self.class.coalesce_ranges(combo)
 
       # Ensure the combo doesn't leave any orphans
       next unless board_ranges.all? do |board_range|
@@ -263,6 +251,18 @@ class ClueSetView
     # Reassemble the combos into an array of arrays
     result.first.zip(*result[1..]).map(&:uniq)
   end
+
+  # def limit_colours_using_ranges(bv, ranges)
+  #   colour_ranges = ranges.zip(self).group_by { _1[1].colour }.
+  #     transform_values { self.class.coalesce_ranges(_1.map(&:first).flatten) }.to_a
+
+  #   (0...bv.length).each do |index|
+  #     next unless bv[index].nil?
+
+  #     colours = colour_ranges.select { _1[1].any? { |r| r.cover?(index) } }.map(&:first)
+  #     bv.limit_colours(index, colours)
+  #   end
+  # end
 
   def match(board_view)
     ranges = ranges(board_view)
@@ -598,21 +598,26 @@ class ClueSetView
       end
     end
 
-    # puts "iterations: #{iterations}"
-
     solutions
-    # Remove matches that have orphaned solutions.
-    # solutions.select do |solution|
-    #   (0...board_view.length).all? do |board_index|
-    #     colour = board_view[board_index]
-    #     next true if colour.nil? || colour == Puzzle::BLANK
+  end
 
-    #     (0...solution.length).any? do |solution_index|
-    #       location = solution[solution_index]
-    #       clue = self[solution_index]
-    #       board_index >= location && board_index < location + clue.count
-    #     end
-    #   end
-    # end
+  def self.coalesce_ranges(ranges)
+    coalesced = []
+    sorted = ranges.sort_by(&:first)
+    last_range = sorted.first
+    sorted[1..].each do |range|
+      next if last_range.cover?(range)
+
+      if range.cover?(last_range)
+        last_range = range
+      elsif range.first <= last_range.last
+        last_range = (last_range.first...range.last)
+      else
+        coalesced << last_range
+        last_range = range
+      end
+    end
+    coalesced << last_range
+    coalesced
   end
 end

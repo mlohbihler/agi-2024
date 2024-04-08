@@ -503,4 +503,15 @@ describe ClueSetView do
         to(eq({ 0 => 1, 1 => 2 }))
     end
   end
+
+  context ".coalesce_ranges" do
+    it "works" do
+      expect(described_class.coalesce_ranges([0...12])).to(eq([0...12]))
+      expect(described_class.coalesce_ranges([1...17, 7...26, 14...29])).to(eq([1...29]))
+      expect(described_class.coalesce_ranges([16...18, 20...24, 26...30])).to(eq([16...18, 20...24, 26...30]))
+
+      expect(described_class.coalesce_ranges([13...14, 0...12])).to(eq([0...12, 13...14]))
+      expect(described_class.coalesce_ranges([12...14, 0...12])).to(eq([0...14]))
+    end
+  end
 end

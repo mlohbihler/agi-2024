@@ -2,6 +2,7 @@ require "./puzzle"
 require "pry"
 require "pry-remote"
 require "pry-nav"
+require "set"
 
 class ClueSet
   include Enumerable
@@ -43,5 +44,9 @@ class ClueSet
 
   def solved?
     all?(&:solved?)
+  end
+
+  def colours
+    Set.new(map(&:colour).uniq)
   end
 end

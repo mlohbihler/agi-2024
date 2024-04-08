@@ -5,14 +5,15 @@ class Puzzle
 
   def self.from_file(name)
     data = JSON.parse(File.read("puzzles/#{name}.json"))
-    new(*data[0..2])
+    new(*data)
   end
 
-  def initialize(top_clue_sets, left_clue_sets, colour_definitions)
+  def initialize(top_clue_sets, left_clue_sets, colour_definitions, solution = nil)
     @top_clue_sets = top_clue_sets.map { |cs| ClueSet.new(cs) }
     @left_clue_sets = left_clue_sets.map { |cs| ClueSet.new(cs) }
     @colour_definitions = colour_definitions.transform_keys(&:to_sym).transform_values(&:to_sym)
-    @board = Board.new(@left_clue_sets.length, @top_clue_sets.length)
+    @board = Board.new(@left_clue_sets.length, @top_clue_sets.length, parse_solution(solution))
+    @board.init_colour_limits(@top_clue_sets, @left_clue_sets)
 
     # Validations:
     # The counts for each colour are the same for the rows and cols.
@@ -51,6 +52,29 @@ class Puzzle
     # All colours are in the definitions, and vice versa
     if (@colour_definitions.keys - [BLANK]).sort != top.keys.sort
       raise "Colour codes do not match clues: #{@colour_definitions.keys} vs #{top.keys}"
+    end
+  end
+
+  def parse_solution(solution_strings)
+    return if solution_strings.nil?
+
+    if solution_strings.length != @left_clue_sets.length
+      raise "Solution rows (#{solution_strings.length}) is different from the row count (#{@left_clue_sets.length})"
+    end
+
+    solution_strings.map do |str|
+      if str.length != @top_clue_sets.length
+        raise "Solution string length (#{str.length}) is different from the col count (#{@right_clue_sets.length})"
+      end
+
+      str.chars.map do |c|
+        colour = c.to_sym
+        if colour != Puzzle::BLANK && !@colour_definitions.key?(colour)
+          raise "Solution colour #{c} is not in colour defintions"
+        end
+
+        colour
+      end
     end
   end
 
@@ -141,10 +165,10 @@ class Puzzle
   # Drawing
   #
   def draw(colour: false, rotate: false)
-    colour && @colour_definitions ? draw_with_color : draw_without_color(rotate: rotate)
+    colour && @colour_definitions ? draw_with_colour : draw_without_colour(rotate: rotate)
   end
 
-  def draw_without_color(rotate: false)
+  def draw_without_colour(rotate: false)
     if rotate
       col_range = (0...@left_clue_sets.length)
       row_range = (@top_clue_sets.length - 1..0).step(-1)
@@ -171,7 +195,7 @@ class Puzzle
     puts "  #{col_range.map { dirty_render(@board.dirty?(!is_row, _1)) }.join}"
   end
 
-  def draw_with_color
+  def draw_with_colour
     indices = (0...@top_clue_sets.length).map do |i|
       s = ((i + 1) % 100).to_s.rjust(2)
       i.even? ? s : Rainbow(s).orchid
