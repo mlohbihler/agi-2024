@@ -125,7 +125,7 @@ class Puzzle
     # TODO: use the "solved" attribute in the clues to know what clues are done, and be able to
     # split views into sub-views.
     # Can also do processing prior to ranges to mark areas of the board that are unavailable.
-    # binding.pry
+    binding.pry
   end
 
   def solved?
@@ -135,7 +135,7 @@ class Puzzle
   def fill_rows_by_counting
     # Fills cells by trying to match clues to existing board values, and then creating views of
     # corresponding rows/cols and clues, and using the fill method to try and find more values.
-    iterate(until_clean: true) do |cs, bv|
+    iterate(until_clean: false) do |cs, bv|
       cs.view.fill(bv)
     end
   end
@@ -145,6 +145,7 @@ class Puzzle
 
     iterate(until_clean: true) do |cs, bv|
       csv = cs.view
+      bv.limit_edge_colours(csv)
       bv.fill_from_matches(csv)
       # @board.draw
       # binding.pry

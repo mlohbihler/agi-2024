@@ -108,8 +108,18 @@ class BoardView
     view(*padding)
   end
 
-  def to_s
-    (0...length).map { |i| self[i].nil? ? Puzzle::UNKNOWN : self[i].to_s }.join
+  def to_s(with_colours: false)
+    cells = (0...length).map { |i| self[i].nil? ? Puzzle::UNKNOWN : self[i].to_s }.join
+    if with_colours
+      colours = (0...length).map { |i| self[i].nil? ? colour_limits(i).to_a.sort : [] }
+      max_colour_length = colours.map(&:length).max
+      colour_strings = (0...max_colour_length).map do |ci|
+        colours.map { _1[ci] || " " }.join
+      end.join("\n")
+      [cells, colour_strings].join("\n")
+    else
+      cells
+    end
   end
 
   def to_clues
@@ -137,6 +147,46 @@ class BoardView
     self.class.new(@board, @index, @is_row, @from + from, @from + to)
   end
 
+  # Start is inclusive in both directions
+  def limit_colours_with_clue(clue, start, right:)
+    return if clue.solved?
+
+    remaining = clue.count
+    if right
+      to = start
+      # Find the ending index of the first place to the right where the clue could fit.
+      loop do
+        if self[to] == Puzzle::BLANK
+          remaining = clue.count
+        elsif !self[to].nil? && self[to] != clue.colour
+          raise "Unable to find a place to fit the clue"
+        else
+          remaining -= 1
+        end
+        to += 1
+        break if remaining == 0
+      end
+      from = to - clue.count
+    else
+      from = start
+      # Find the starting index of the first place to the left where the clue could fit.
+      loop do
+        if self[from] == Puzzle::BLANK
+          remaining = clue.count
+        elsif !self[from].nil? && self[from] != clue.colour
+          raise "Unable to find a place to fit the clue"
+        else
+          remaining -= 1
+        end
+        break if remaining == 0
+
+        from -= 1
+      end
+      to = from + clue.count
+    end
+    (from...to).each { limit_colours(_1, clue.colour) }
+  end
+
   def fill_from_ranges(csv)
     csv.ranges(self).each_with_index do |ranges, index|
       next unless ranges.one?
@@ -147,6 +197,13 @@ class BoardView
 
       fill(range.last - clue.count, range.first + clue.count, clue.colour)
     end
+  end
+
+  def limit_edge_colours(csv)
+    return if csv.colours.length <= 1
+
+    limit_colours_with_clue(csv[0], 0, right: true)
+    limit_colours_with_clue(csv[csv.length - 1], length - 1, right: false)
   end
 
   def fill_from_matches(csv, bfi: false)
@@ -309,46 +366,15 @@ class BoardView
 
       if clue_index > 0
         left_clue = csv[clue_index - 1]
-        unless left_clue.solved?
-          start = clue.solution - (clue.colour == left_clue.colour ? 1 : 0) - 1
-          # Find the starting index of the first place where the left clue could fit.
-          remaining = left_clue.count
-          loop do
-            if self[start] == Puzzle::BLANK
-              remaining = left_clue.count
-            elsif !self[start].nil? && self[start] != left_clue.colour
-              raise "Unable to find a place to fit the left clue"
-            else
-              remaining -= 1
-            end
-            break if remaining == 0
-
-            start -= 1
-          end
-          (start...start + left_clue.count).each { limit_colours(_1, left_clue.colour) }
-        end
+        start = clue.solution - (clue.colour == left_clue.colour ? 1 : 0) - 1
+        limit_colours_with_clue(left_clue, start, right: false)
       end
 
       next unless clue_index + 1 < csv.length
 
       right_clue = csv[clue_index + 1]
-      next if right_clue.solved?
-
-      finish = clue.to + (clue.colour == right_clue.colour ? 1 : 0)
-      # Find the ending index of the first place where the right clue could fit.
-      remaining = right_clue.count
-      loop do
-        if self[finish] == Puzzle::BLANK
-          remaining = right_clue.count
-        elsif !self[finish].nil? && self[finish] != right_clue.colour
-          raise "Unable to find a place to fit the right clue"
-        else
-          remaining -= 1
-        end
-        finish += 1
-        break if remaining == 0
-      end
-      (finish - right_clue.count...finish).each { limit_colours(_1, right_clue.colour) }
+      start = clue.to + (clue.colour == right_clue.colour ? 1 : 0)
+      limit_colours_with_clue(right_clue, start, right: true)
     end
   end
 end

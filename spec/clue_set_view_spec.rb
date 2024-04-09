@@ -257,15 +257,29 @@ describe ClueSetView do
   end
 
   context "#match_recursive" do
-    def call(clues, board_input, expected_clues, expected = nil)
+    def call(clues, board_input, expected_clues, colours: nil, expected: nil)
       bv = Board.from_strings([board_input]).view(0, true)
       csv = ClueSet.new(clues).view
+      if colours
+        colour_sets = colours.split(",").map { _1.empty? ? nil : _1.chars.to_set(&:to_sym) }
+        (0...bv.length).each do |i|
+          colour_set = colour_sets[i]
+          bv.limit_colours(i, colour_set.delete(Puzzle::BLANK)) if colour_set
+        end
+      end
       expect(csv.match_recursive(bv)).to eq(expected || csv.match_bfi(bv))
       expect(csv.to_s[1..-2]).to eq(expected_clues)
     end
 
     it "works" do
-      call("1b,5g,4g,2g,1s", "..............gg..gg....gg....", "", {0=>1, 1=>2, 2=>3})
+      call(
+        "1b,1s,1b,1s",
+        " ..........",
+        "1b,1s,1b,1s",
+        colours: ",b,b,b,s,b,b,s,s,s,b"
+      )
+
+      call("1b,5g,4g,2g,1s", "..............gg..gg....gg....", "", expected: {0=>1, 1=>2, 2=>3})
 
       call("1b,3r,2b,3r(8),8b", " ..rrrbbrrr.bbbbbbb.", "1b,3r(3),2b(6),3r(8),8b")
       call("1b,4r,3b,2b,1b", "........r...........", "1b,4r,3b,2b,1b")
@@ -280,7 +294,7 @@ describe ClueSetView do
         "1d,1c,1d,1b,1d,1c,1d,1a,1d,1c,1d,1b,1d,1c,1d",
         "...d...c...d..b..d...c.d...a..d..c...d...b..d..c..d..",
         "1d(3),1c(7),1d(11),1b(14),1d(17),1c(21),1d(23),1a(27),1d(30),1c(33),1d(37),1b(41),1d(44),1c(47),1d(50)",
-        { 0 => 0, 1 => 1, 2 => 2, 3 => 3, 4 => 4, 5 => 5, 6 => 6, 7 => 7, 8 => 8, 9 => 9, 10 => 10, 11 => 11, 12 => 12, 13 => 13, 14 => 14 }
+        expected: { 0 => 0, 1 => 1, 2 => 2, 3 => 3, 4 => 4, 5 => 5, 6 => 6, 7 => 7, 8 => 8, 9 => 9, 10 => 10, 11 => 11, 12 => 12, 13 => 13, 14 => 14 }
       )
 
       call("1b,1g,1b,3g(5),1b,3g,1b,3g,2b,2g,6b", ".....gggbgg.bgggbbg.bbbbb.                   ", "1b,1g,1b,3g(5),1b(8),3g,1b(12),3g(13),2b(16),2g,6b")

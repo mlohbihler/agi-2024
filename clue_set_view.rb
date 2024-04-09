@@ -21,6 +21,10 @@ class ClueSetView
     @to - @from
   end
 
+  def empty?
+    length == 0
+  end
+
   def [](index)
     raise "Out of bounds #{index} in [#{@from}, #{@to})" unless in_bounds?(index)
 
@@ -93,6 +97,10 @@ class ClueSetView
     end
 
     ranges
+  end
+
+  def colours
+    Set.new(map(&:colour).uniq)
   end
 
   # TODO: need a way to better accomodate for spaces in determining ranges. Like eliminating clue

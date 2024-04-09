@@ -55,7 +55,8 @@ class Board
     if @solution && @solution[row][col] != value
       raise "solution value to set #{value} does not match puzzle solution #{@solution[row][col]}"
     end
-    unless value == Puzzle::BLANK || @colour_limits[row][col]&.include?(value)
+    unless value == Puzzle::BLANK || @colour_limits[row][col].nil? ||
+        @colour_limits[row][col].include?(value)
       raise "Trying to set (#{row},#{col}) to '#{value}' which is not in allowed colours '#{@colour_limits[row][col]}'"
     end
 
