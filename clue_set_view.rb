@@ -275,9 +275,7 @@ class ClueSetView
   def match(board_view)
     ranges = ranges(board_view)
     bvcs = board_view.to_clues
-
     matches = match_from_ranges(ranges, bvcs)
-
     mark_solved_clues(matches, bvcs)
   end
 
