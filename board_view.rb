@@ -219,6 +219,7 @@ class BoardView
     cap_solved_clues(csv, board_clue_set, matches)
     fill_around_blanks(csv, board_clue_set, matches)
     limit_colours_using_matches(csv, matches)
+    fill_blanks_where_no_more_colours
 
     fill_from_ranges(csv)
   end
@@ -375,6 +376,12 @@ class BoardView
       right_clue = csv[clue_index + 1]
       start = clue.to + (clue.colour == right_clue.colour ? 1 : 0)
       limit_colours_with_clue(right_clue, start, right: true)
+    end
+  end
+
+  def fill_blanks_where_no_more_colours
+    each_with_index do |_, i|
+      self[i] = Puzzle::BLANK if colour_limits(i).empty?
     end
   end
 end

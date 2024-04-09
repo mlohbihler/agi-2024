@@ -21,5 +21,4 @@ puts
 
 # https://en.wikipedia.org/wiki/X11_color_names
 
-# TODO: set all cells with no allowed colours to blanks
 # TODO: check ranges for lengths that match the clues and fill
