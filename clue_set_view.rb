@@ -103,6 +103,10 @@ class ClueSetView
     Set.new(map(&:colour).uniq)
   end
 
+  def unsolved_colours
+    Set.new(reject(&:solved?).map(&:colour).uniq)
+  end
+
   # TODO: need a way to better accomodate for spaces in determining ranges. Like eliminating clue
   # ranges when they can't fit together inside a view section.
   def create_ranges(board_view)

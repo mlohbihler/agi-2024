@@ -122,10 +122,20 @@ class Puzzle
     # Like this one.
     fill_rows_by_clue_matching
 
-    # TODO: use the "solved" attribute in the clues to know what clues are done, and be able to
-    # split views into sub-views.
-    # Can also do processing prior to ranges to mark areas of the board that are unavailable.
     binding.pry
+    # iterate(until_clean: false) do |cs, bv|
+    #   csv = cs.view
+    #   ranges = csv.ranges(bv)
+
+    #   csv.zip(ranges).each do |(clue, clue_ranges)|
+    #     next if clue.solved?
+    #     next unless clue_ranges.one?
+    #     next unless clue.count * 2 > clue_ranges.first.size
+
+    #     binding.pry
+    #     # board_view.fill(clue_ranges.first.first, clue_ranges.first.last, clue.colour)
+    #   end
+    # end
   end
 
   def solved?

@@ -218,6 +218,7 @@ class BoardView
     cap_solved_clues(csv, board_clue_set, matches)
     fill_around_blanks(csv, board_clue_set, matches)
     limit_colours_using_matches(csv, matches)
+    limit_colours_to_unsolved(csv)
     fill_blanks_where_no_more_colours
 
     fill_from_ranges(csv)
@@ -376,6 +377,12 @@ class BoardView
       start = clue.to + (clue.colour == right_clue.colour ? 1 : 0)
       limit_colours_with_clue(right_clue, start, right: true)
     end
+  end
+
+  # Limit the colours of unsolved cells to the colours of the remaining unsolved clues.
+  def limit_colours_to_unsolved(csv)
+    colours = csv.unsolved_colours
+    each_with_index { |_, i| limit_colours(i, colours) if self[i].nil? }
   end
 
   def fill_blanks_where_no_more_colours
