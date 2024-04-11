@@ -1,9 +1,10 @@
-require "./clue_set_view"
-require "./puzzle"
-
 require "pry"
 require "pry-remote"
 require "pry-nav"
+
+require "./clue_set_view"
+require "./patches"
+require "./puzzle"
 
 class BoardView
   include Enumerable
@@ -148,9 +149,7 @@ class BoardView
   end
 
   # Start is inclusive in both directions
-  def limit_colours_with_clue(clue, start, right:)
-    return if clue.solved?
-
+  def find_range_of_first_fit(clue, start, right:)
     remaining = clue.count
     if right
       to = start
@@ -184,18 +183,40 @@ class BoardView
       end
       to = from + clue.count
     end
-    (from...to).each { limit_colours(_1, clue.colour) }
+    (from...to)
+  end
+
+  def limit_colours_with_clue(clue, start, right:)
+    return if clue.solved?
+
+    find_range_of_first_fit(clue, start, right: right).each { limit_colours(_1, clue.colour) }
   end
 
   def fill_from_ranges(csv)
-    csv.ranges(self).each_with_index do |ranges, index|
-      next unless ranges.one?
+    ranges = csv.ranges(self)
+    ranges = csv.limit_ranges_using_matches(ranges, self, csv.match_recursive(self))
+
+    # Fill any singular clue range with the clue colour.
+    ranges.each_with_index do |clue_ranges, index|
+      next unless clue_ranges.one?
 
       clue = csv[index]
-      range = ranges.first
+      range = clue_ranges.first
       next unless range.size < clue.count * 2
 
       fill(range.last - clue.count, range.first + clue.count, clue.colour)
+    end
+
+    # Fill any indexes missing from all of the ranges with blanks.
+    coalesced_ranges = ClueSetView.coalesce_ranges(ranges.flatten)
+
+    range_enum = coalesced_ranges.each
+
+    range = range_enum.next
+    each_with_index do |_, i|
+      range = range_enum.next_or_nil if range && i >= range.last
+      # binding.pry if (range.nil? || i < range.first) && self[i].nil?
+      self[i] = Puzzle::BLANK if (range.nil? || i < range.first) && self[i].nil?
     end
   end
 

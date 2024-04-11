@@ -105,6 +105,7 @@ class Board
   end
 
   def dirtify
+    # TODO only need to dirtify the rows that are not solved.
     @dirty_rows.fill(true)
     @dirty_cols.fill(true)
   end

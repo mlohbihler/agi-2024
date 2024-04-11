@@ -5,14 +5,48 @@ require "./clue_set"
 require "./clue_set_view"
 
 describe ClueSetView do
-  def create_board_view(input)
-    Board.from_strings([input]).view(0, true)
+  def create_views(clues, board_input, colours: nil)
+    bv = Board.from_strings([board_input]).view(0, true)
+    if colours
+      colour_sets = colours.split(",").map { _1.empty? ? nil : _1.chars.to_set(&:to_sym) }
+      raise "board input: #{board_input.length}, colours: #{colour_sets.length}" if board_input.length != colour_sets.length
+
+      (0...bv.length).each do |i|
+        colour_set = colour_sets[i]
+        bv.limit_colours(i, colour_set.delete(Puzzle::BLANK)) if colour_set
+      end
+    end
+    [bv, ClueSet.new(clues).view]
+  end
+
+  context "#limit_ranges_using_matches" do
+    def call(clues, board, colours: nil)
+      bv, csv = create_views(clues, board, colours: colours)
+      csv.limit_ranges_using_matches(csv.ranges(bv), bv, csv.match_recursive(bv))
+    end
+
+    it "works" do
+      expect(
+        call(
+          "1s,5b,1b,1b,1s,1b",
+          "      .      ..bbb......b... ......",
+          colours: ",,,,,,s,,,,,,,b,b,,,,b,bs,bs,b,bs,b,,b,b,s,,s,s,b,b,s,b"
+          #      .      ..bbb......b... ......
+          #      s      bb   bbbbbb bbs ssbbsb
+          #                   ss s
+        )
+      ).to(
+        eq(
+          [[6...7], [13...20], [19...27], [21...27, 31...33], [22...23, 27...28, 29...31, 33...34], [23...27, 31...33, 34...35]]
+        )
+      )
+    end
   end
 
   context "#remove_invalid_ranges" do
     def call(board, ranges)
-      bv = Board.from_strings([board]).view(0, true)
-      ClueSet.new("").view.remove_invalid_ranges(bv, ranges)
+      bv, csv = create_views("", board)
+      csv.remove_invalid_ranges(bv, ranges)
     end
 
     it "works" do
@@ -28,9 +62,8 @@ describe ClueSetView do
   end
 
   context "#create_ranges" do
-    def call(clues, board_input)
-      bv = Board.from_strings([board_input]).view(0, true)
-      csv = ClueSet.new(clues).view
+    def call(clues, board, colours: nil)
+      bv, csv = create_views(clues, board, colours: colours)
       csv.create_ranges(bv)
     end
 
@@ -40,21 +73,20 @@ describe ClueSetView do
   end
 
   context "#ranges" do
-    def ranges(clues, board_input)
-      bv = Board.from_strings([board_input]).view(0, true)
-      csv = ClueSet.new(clues).view
+    def call(clues, board, colours: nil)
+      bv, csv = create_views(clues, board, colours: colours)
       csv.ranges(bv)
     end
 
     it "works" do
-      expect(ranges("1b,5g,4g,2g,1s", "..............gg..gg....gg....")).to(
+      expect(call("1b,5g,4g,2g,1s", "..............gg..gg....gg....")).to(
         eq([[0...12], [1...17], [7...26], [14...29], [16...18, 20...24, 26...30]])
       )
-      expect(ranges("1b,1a,1b,2b,1b", "............b.......a...b..bb..b.............")).to(
+      expect(call("1b,1a,1b,2b,1b", "............b.......a...b..bb..b.............")).to(
         eq([[0...20], [13...24], [14...20, 21...40], [16...20, 21...43], [21...45]])
       )
 
-      expect(ranges("1g,6g,3g,4g,1s,1b,1s,1s", ".....g..........gg. .gggs..........")).to(
+      expect(call("1g,6g,3g,4g,1s,1b,1s,1s", ".....g..........gg. .gggs..........")).to(
         eq(
           [
             [0...12],
@@ -68,14 +100,14 @@ describe ClueSetView do
           ]
         )
       )
-      expect(ranges("3b,2b", "...b......b...")).to(eq([[1...11], [5...14]]))
-      expect(ranges("1b(0),4b", "b ..bbb.")).to(eq([[0...1], [3...8]]))
-      expect(ranges("3b(5),4g(8),1b(12),14o(13),1b(27),4b", "     bbbggggboooooooooooooob ..bbb.")).
+      expect(call("3b,2b", "...b......b...")).to(eq([[1...11], [5...14]]))
+      expect(call("1b(0),4b", "b ..bbb.")).to(eq([[0...1], [3...8]]))
+      expect(call("3b(5),4g(8),1b(12),14o(13),1b(27),4b", "     bbbggggboooooooooooooob ..bbb.")).
         to(eq([[5...8], [8...12], [12...13], [13...27], [27...28], [30...35]]))
-      expect(ranges("2b,3b,2b", "    .... b..    bb  ")).to(eq([[4...8], [9...12], [16...18]]))
-      expect(ranges("2a,2a,2a", "..a...a...")).to(eq([[(1...4)], [(5...7)], [(8...10)]]))
-      expect(ranges("2a,2a,2a", "..a ..a...")).to(eq([[(1...3)], [(5...7)], [(8...10)]]))
-      expect(ranges("3a,2a,5b,1b,3a", "....aa....bbb.b....")).to(
+      expect(call("2b,3b,2b", "    .... b..    bb  ")).to(eq([[4...8], [9...12], [16...18]]))
+      expect(call("2a,2a,2a", "..a...a...")).to(eq([[(1...4)], [(5...7)], [(8...10)]]))
+      expect(call("2a,2a,2a", "..a ..a...")).to(eq([[(1...3)], [(5...7)], [(8...10)]]))
+      expect(call("3a,2a,5b,1b,3a", "....aa....bbb.b....")).to(
         eq(
           [
             [(0...5)],
@@ -86,7 +118,7 @@ describe ClueSetView do
           ]
         )
       )
-      expect(ranges("3a,2a,5b,1b,3a", "...aa...b.b.b.....aa.")).to(
+      expect(call("3a,2a,5b,1b,3a", "...aa...b.b.b.....aa.")).to(
         eq(
           [
             [(2...5)],
@@ -97,15 +129,15 @@ describe ClueSetView do
           ]
         )
       )
-      expect(ranges("7a,2b,6a", "a.a.a.a....b...aa...a")).to(eq([[(0...11)], [(7...15)], [(12...21)]]))
-      expect(ranges("1a,1a", " .a......")).to(eq([[(2...7)], [(4...9)]]))
-      expect(ranges("4a,2a,2a,2a", "....a...a........a")).to(eq([[1...7], [7...12], [10...15], [13...18]]))
-      expect(ranges("4a,2a,2a,2a", ".aaaa...a........a")).to(eq([[1...5], [7...12], [10...15], [13...18]]))
-      expect(ranges("2b,2r,1b,4a", "..........rb..aa....")).to(eq([[0...9], [2...11], [11...14], [12...18]]))
-      expect(ranges("1b,7r,5b,1b", ".....rrrrrr..b..b...")).to(eq([[0...5], [4...12], [12...18], [18...20]]))
-      expect(ranges("3a,3b", ".....   ...")).to(eq([[0...5], [8...11]]))
-      expect(ranges("3a,2a", ".....   ...")).to(eq([[0...5], [8...11]]))
-      expect(ranges("3a,2a", ".....   ......")).to(eq([[0...5, 8...11], [8...14]]))
+      expect(call("7a,2b,6a", "a.a.a.a....b...aa...a")).to(eq([[(0...11)], [(7...15)], [(12...21)]]))
+      expect(call("1a,1a", " .a......")).to(eq([[(2...7)], [(4...9)]]))
+      expect(call("4a,2a,2a,2a", "....a...a........a")).to(eq([[1...7], [7...12], [10...15], [13...18]]))
+      expect(call("4a,2a,2a,2a", ".aaaa...a........a")).to(eq([[1...5], [7...12], [10...15], [13...18]]))
+      expect(call("2b,2r,1b,4a", "..........rb..aa....")).to(eq([[0...9], [2...11], [11...14], [12...18]]))
+      expect(call("1b,7r,5b,1b", ".....rrrrrr..b..b...")).to(eq([[0...5], [4...12], [12...18], [18...20]]))
+      expect(call("3a,3b", ".....   ...")).to(eq([[0...5], [8...11]]))
+      expect(call("3a,2a", ".....   ...")).to(eq([[0...5], [8...11]]))
+      expect(call("3a,2a", ".....   ......")).to(eq([[0...5, 8...11], [8...14]]))
     end
 
     it "uses solved colour information to improve range accuracy" do
@@ -318,6 +350,10 @@ describe ClueSetView do
   end
 
   context "#fill" do
+    def create_board_view(input)
+      Board.from_strings([input]).view(0, true)
+    end
+
     it "works" do
       clue_set_view = ClueSetView.new(ClueSet.new("1b,7r,8b"))
       board_view = create_board_view("....................")

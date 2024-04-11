@@ -122,7 +122,7 @@ class Puzzle
     # Like this one.
     fill_rows_by_clue_matching
 
-    binding.pry
+    # binding.pry
     # iterate(until_clean: false) do |cs, bv|
     #   csv = cs.view
     #   ranges = csv.ranges(bv)
@@ -166,6 +166,7 @@ class Puzzle
     @board.dirtify
 
     iterate(until_clean: false) do |cs, bv|
+      # binding.pry
       bv.fill_from_matches(cs.view, bfi: true)
       # @board.draw
       # binding.pry
@@ -200,7 +201,7 @@ class Puzzle
         (is_row ? @board[row, col] : @board[col, row]) || Puzzle::FANCY_UNKNOWN
       end.join
       dirty = dirty_render(@board.dirty?(is_row, row))
-      puts "#{(row + 1) % 10}|#{board}#{dirty} #{clues[row]}"
+      puts "#{(row + 1) % 10}|#{board}|#{dirty} #{clues[row]}"
     end
 
     puts "  #{col_range.map { dirty_render(@board.dirty?(!is_row, _1)) }.join}"

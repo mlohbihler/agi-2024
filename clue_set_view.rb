@@ -1,5 +1,6 @@
-require "./puzzle"
 require "./clue_view"
+require "./patches"
+require "./puzzle"
 
 class ClueSetView
   include Enumerable
@@ -264,6 +265,26 @@ class ClueSetView
     result.first.zip(*result[1..]).map(&:uniq)
   end
 
+  def limit_ranges_using_matches(ranges, bv, matches)
+    bvcs = bv.to_clues
+    matches.each do |(bi, ci)|
+      board_clue = bvcs[bi]
+      clue = self[ci]
+      clue_ranges = ranges[ci]
+
+      # Find the clue range that includes the board clue
+      range = clue_ranges.find { _1.cover?(board_clue.solution) }
+
+      diff = clue.count - board_clue.count
+      from = [board_clue.solution - diff, range.first].max
+      to = [board_clue.to + diff, range.last].min
+
+      ranges[ci] = [(from...to)]
+    end
+    ranges = limit_range_overlap(ranges)
+    remove_invalid_ranges(bv, ranges)
+  end
+
   # def limit_colours_using_ranges(bv, ranges)
   #   colour_ranges = ranges.zip(self).group_by { _1[1].colour }.
   #     transform_values { self.class.coalesce_ranges(_1.map(&:first).flatten) }.to_a
@@ -502,6 +523,7 @@ class ClueSetView
   def match_bfi(board_view)
     solutions = find_all_solutions_bfi(board_view)
     matches = {}
+    iterations = 0
     board_view.to_clues.each_with_index do |board_clue, board_clue_index|
       next if board_clue.colour == Puzzle::BLANK
 
@@ -511,6 +533,10 @@ class ClueSetView
 
       solutions.each do |solution|
         solution.each_with_index do |location, clue_index|
+          iterations += 1
+          puts "BFI match aborted" if iterations == 1_000_000
+          break if iterations >= 1_000_000
+
           next if matches[board_clue_index] == clue_index
 
           clue = self[clue_index]
@@ -531,6 +557,7 @@ class ClueSetView
       end
     end
 
+    # puts "Match iterations: #{iterations}"
     matches
   end
 
@@ -550,13 +577,16 @@ class ClueSetView
     # freedom = board_view.length - sum + 1
     # clues = length
     # puts "freedom: #{freedom}, clues: #{clues}, complexity: #{freedom**clues}"
-    # iterations = 0
+    iterations = 0
 
     solutions = []
     locations = []
     move_last_clue = false
     loop do
-      # iterations += 1
+      iterations += 1
+      puts "BFI find aborted" if iterations == 1_000_000
+      break if iterations >= 1_000_000
+
       if move_last_clue
         # Increment the current location
         locations[-1] += 1
@@ -607,6 +637,8 @@ class ClueSetView
         locations.pop
       end
     end
+
+    # puts "Find iterations: #{iterations}"
 
     solutions
   end

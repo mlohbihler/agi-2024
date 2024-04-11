@@ -4,6 +4,20 @@ require "./clue"
 require "./clue_set"
 
 describe BoardView do
+  def create_views(clues, board_input, colours: nil)
+    bv = Board.from_strings([board_input]).view(0, true)
+    if colours
+      colour_sets = colours.split(",").map { _1.empty? ? nil : _1.chars.to_set(&:to_sym) }
+      raise "board input: #{board_input.length}, colours: #{colour_sets.length}" if board_input.length != colour_sets.length
+
+      (0...bv.length).each do |i|
+        colour_set = colour_sets[i]
+        bv.limit_colours(i, colour_set.delete(Puzzle::BLANK)) if colour_set
+      end
+    end
+    [bv, ClueSet.new(clues).view]
+  end
+
   context "#to_clues" do
     it "returns nothing when there are no solved cells" do
       board = Board.from_strings([".........."])
@@ -14,31 +28,49 @@ describe BoardView do
     it "returns correct clues including start positions" do
       board = Board.from_strings([".aab.bc. ."])
       view = described_class.new(board, 0, true, 0, 10)
-      expect(view.to_clues).to(eq(ClueSet.new([
-        Clue.new(2, :a, 1),
-        Clue.new(1, :b, 3),
-        Clue.new(1, :b, 5),
-        Clue.new(1, :c, 6),
-        Clue.new(1, :" ", 8),
-      ])))
+      expect(view.to_clues).to(
+        eq(
+          ClueSet.new(
+            [
+              Clue.new(2, :a, 1),
+              Clue.new(1, :b, 3),
+              Clue.new(1, :b, 5),
+              Clue.new(1, :c, 6),
+              Clue.new(1, :" ", 8),
+            ]
+          )
+        )
+      )
     end
 
     it "returns correct clues when solved cells are at the edges" do
       board = Board.from_strings(["aaa.....bb"])
       view = described_class.new(board, 0, true, 0, 10)
-      expect(view.to_clues).to(eq(ClueSet.new([
-        Clue.new(3, :a, 0),
-        Clue.new(2, :b, 8),
-      ])))
+      expect(view.to_clues).to(
+        eq(
+          ClueSet.new(
+            [
+              Clue.new(3, :a, 0),
+              Clue.new(2, :b, 8),
+            ]
+          )
+        )
+      )
     end
 
     it "returns correct clues when there is an offset" do
       board = Board.from_strings(["  ..aaa..bb  "])
       view = described_class.new(board, 0, true, 2, 11)
-      expect(view.to_clues).to(eq(ClueSet.new([
-        Clue.new(3, :a, 2),
-        Clue.new(2, :b, 7),
-      ])))
+      expect(view.to_clues).to(
+        eq(
+          ClueSet.new(
+            [
+              Clue.new(3, :a, 2),
+              Clue.new(2, :b, 7),
+            ]
+          )
+        )
+      )
     end
   end
 
@@ -58,24 +90,23 @@ describe BoardView do
   end
 
   context "#fill_from_ranges" do
-    def call(board, clues)
-      board_view = Board.from_strings([board]).view(0, true)
-      csv = ClueSet.new(clues).view(0, 0)
-      board_view.fill_from_ranges(csv)
-      board_view.to_s
+    def call(clues, board, colours: nil)
+      bv, csv = create_views(clues, board, colours: colours)
+      bv.fill_from_ranges(csv)
+      bv.to_s
     end
 
     it "works" do
-      expect(call("......", "3b")).to(eq("......"))
-      expect(call(" ......", "4b")).to(eq(" ..bb.."))
-      expect(call("  ......", "5b")).to(eq("  .bbbb."))
-      expect(call("......", "6b")).to(eq("bbbbbb"))
-      expect(call(".......", "3b")).to(eq("......."))
-      expect(call(".......", "4b")).to(eq("...b..."))
-      expect(call("  .......   ", "5b")).to(eq("  ..bbb..   "))
-      expect(call(".......", "6b")).to(eq(".bbbbb."))
-      expect(call(".......", "7b")).to(eq("bbbbbbb"))
-      expect(call("... ....", "2b,2b")).to(eq(".b. ...."))
+      expect(call("3b", "......")).to(eq("......"))
+      expect(call("4b", " ......")).to(eq(" ..bb.."))
+      expect(call("5b", "  ......")).to(eq("  .bbbb."))
+      expect(call("6b", "......")).to(eq("bbbbbb"))
+      expect(call("3b", ".......")).to(eq("......."))
+      expect(call("4b", ".......")).to(eq("...b..."))
+      expect(call("5b", "  .......   ")).to(eq("  ..bbb..   "))
+      expect(call("6b", ".......")).to(eq(".bbbbb."))
+      expect(call("7b", ".......")).to(eq("bbbbbbb"))
+      expect(call("2b,2b", "... ....")).to(eq(".b. ...."))
     end
   end
 
@@ -95,6 +126,7 @@ describe BoardView do
     end
 
     it "doesn't actually change anything, but would be nice if it did" do
+      # nothing to do yet
     end
 
     xit "works using bfi" do
@@ -214,5 +246,9 @@ describe BoardView do
       expect(call("..a.. ... .aaa...", "4a,1a,6a")).to(eq("..a.. ... .aaa..."))
       expect(call("..a... ...bbb...", "4a,6b")).to(eq("..a... ...bbb..."))
     end
+  end
+
+  context "#clue_ranges" do
+
   end
 end
